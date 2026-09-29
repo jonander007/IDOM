@@ -53,7 +53,7 @@
   .panel + .panel{margin-top:18px}
   .panel h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
     margin:22px 0 12px;padding-top:14px;border-top:1px solid var(--line-soft);font-weight:600}
-  .panel h3:first-of-type{margin-top:4px}
+  .panel h3:first-of-type{margin-top:0;border-top:0;padding-top:0}
 
   .field{margin-bottom:16px}
   .field:last-child{margin-bottom:0}
@@ -76,8 +76,18 @@
   }
   .seg button:last-child{border-right:0}
   .seg button[aria-pressed=true]{background:var(--ink);color:#fff;font-weight:600}
-  .seg.modo button{font-size:15px;padding:11px 4px}
-  .seg.modo button[aria-pressed=true]{background:var(--teal)}
+  .modos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:22px}
+  @media (max-width:700px){.modos{grid-template-columns:1fr}}
+  .modos button{font:inherit;text-align:left;cursor:pointer;background:var(--card);color:var(--ink);
+    border:1px solid var(--line);border-top:4px solid var(--line);padding:12px 14px;border-radius:2px}
+  .modos button:hover{border-color:var(--ink)}
+  .modos button b{display:block;font-size:16px;font-weight:600;margin-bottom:2px}
+  .modos button span{display:block;font-size:12.5px;color:var(--muted);line-height:1.35}
+  .modos button[aria-pressed=true]{border-color:var(--teal);border-top-color:var(--teal);background:#fff;
+    box-shadow:0 1px 0 var(--teal)}
+  .modos button[aria-pressed=true] b{color:var(--teal)}
+  tr.sec td{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+    padding-top:14px;border-bottom:1px solid var(--line)}
 
   .check{display:flex;gap:8px;align-items:center;font-size:13.5px}
 
@@ -168,8 +178,11 @@
 
   .aviso{padding:16px;background:var(--warn-bg);border:1px solid #E3C7BF;color:var(--red);font-size:14px}
 
-  body.m-nomina .solo-estancia,
-  body.m-estancia .solo-nomina,
+  body:not(.m-desglose) .solo-desglose,
+  body:not(.m-subidas) .solo-subidas,
+  body:not(.m-estancia) .solo-estancia,
+  body.m-desglose .no-desglose,
+  body.m-estancia .no-estancia,
   body.p12 .solo-14,
   body:not(.irpf-manual) .solo-manual,
   body:not(.irpf-tabla) .solo-tabla{display:none !important}
@@ -178,7 +191,7 @@
   footer p{margin:0 0 8px}
 </style>
 </head>
-<body class="m-nomina irpf-tabla">
+<body class="m-desglose irpf-tabla">
 <div class="wrap">
 
 <header>
@@ -194,17 +207,16 @@
   </div>
 </header>
 
+<nav class="modos" id="segModo" aria-label="Qué quieres calcular">
+  <button type="button" data-v="desglose" aria-pressed="true"><b>Desglosar nómina</b><span>Tu nómina de un mes y de un año, línea a línea</span></button>
+  <button type="button" data-v="subidas" aria-pressed="false"><b>Subidas de sueldo</b><span>Aplica subidas en cadena y mira cómo quedan mensualidades y extras</span></button>
+  <button type="button" data-v="estancia" aria-pressed="false"><b>Calcular estancia</b><span>Desplazamiento desde el día que te vas, con plus y dietas</span></button>
+</nav>
+
 <div class="grid">
 
   <!-- ================= PANEL ================= -->
   <form class="panel" id="form" onsubmit="return false">
-    <div class="field">
-      <div class="seg modo" id="segModo">
-        <button type="button" data-v="nomina" aria-pressed="true">Nómina</button>
-        <button type="button" data-v="estancia" aria-pressed="false">Estancia</button>
-      </div>
-    </div>
-
     <h3>Sueldo</h3>
     <div class="field">
       <label class="lab" for="importe">Salario bruto actual</label>
@@ -236,6 +248,7 @@
       <div class="hint">Cada extra se devenga en los meses desde la anterior: si hay una subida a mitad del periodo, la extra mezcla el sueldo viejo y el nuevo.</div>
     </div>
 
+    <div class="no-desglose">
     <h3>Subidas de sueldo, en cadena</h3>
     <div id="subidas"></div>
     <div class="quick" id="quickSub">
@@ -246,6 +259,7 @@
       <button type="button" data-p="10">+10 %</button>
     </div>
     <div class="hint" id="hintSubidas"></div>
+    </div>
 
     <div class="solo-estancia">
       <h3>Desplazamiento</h3>
@@ -274,10 +288,10 @@
       </div>
     </div>
 
-    <div class="solo-nomina">
+    <div class="solo-subidas">
       <h3>Calendario</h3>
       <div class="field">
-        <label class="lab" for="anio">Año que quieres ver mes a mes</label>
+        <label class="lab" for="anio">Ver mes a mes desde el año</label>
         <input type="number" id="anio" value="2026" min="2000" max="2100">
       </div>
     </div>
@@ -344,9 +358,9 @@
   <!-- ================= RESULTADOS ================= -->
   <div>
 
-    <!-- ========== NÓMINA ========== -->
-    <div class="solo-nomina">
-      <div class="hero">
+    <!-- ========== DESGLOSE Y SUBIDAS ========== -->
+    <div class="no-estancia">
+      <div class="hero solo-desglose">
         <div class="row">
           <div>
             <div class="figure" id="nHeroNeto">—</div>
@@ -368,13 +382,40 @@
         <div class="note" id="nTramoNota"></div>
       </div>
 
-      <div class="panel" style="margin-top:18px">
-        <h2>Mensualidades y pagas extras, con el sueldo actual</h2>
+      <div class="panel solo-desglose" style="margin-top:18px">
+        <h2>Tu nómina, línea a línea</h2>
+        <div class="ancho"><table id="nNomina"></table></div>
+        <div class="note" id="nNominaNota"></div>
+      </div>
+
+      <div class="panel solo-desglose" style="margin-top:18px">
+        <h2>Mensualidades, pagas extras y año</h2>
         <div class="ancho"><table id="nTablaReparto"></table></div>
         <div class="note" id="nCosteNota"></div>
       </div>
 
-      <div class="panel" style="margin-top:18px">
+      <div class="hero solo-subidas">
+        <div class="row">
+          <div>
+            <div class="figure" id="sHeroNeto">—</div>
+            <div class="fig-lab" id="sHeroLab">líquido de una mensualidad tras las subidas</div>
+          </div>
+          <div id="sHeroExtraBox">
+            <div class="sub" id="sHeroExtra">—</div>
+            <div class="sub-lab" id="sHeroExtraLab">líquido de cada paga extra</div>
+          </div>
+          <div>
+            <div class="sub" id="sHeroBruto">—</div>
+            <div class="sub-lab" id="sHeroBrutoLab">bruto anual al final</div>
+          </div>
+          <div>
+            <div class="sub" id="sHeroGana">—</div>
+            <div class="sub-lab">más de líquido al año que hoy</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel solo-subidas" style="margin-top:18px">
         <h2>Subidas encadenadas <span class="tag">· cada una sobre el sueldo que deja la anterior</span></h2>
         <div class="scrollx"><table id="nRecorrido"></table></div>
         <div class="note" id="nRecorridoNota"></div>
@@ -388,12 +429,12 @@
         </div>
       </div>
 
-      <div class="panel" style="margin-top:18px">
+      <div class="panel solo-subidas" style="margin-top:18px">
         <h2>Mes a mes <span class="tag" id="nCalTag"></span></h2>
         <div id="nCalendario"></div>
       </div>
 
-      <div class="panel" style="margin-top:18px">
+      <div class="panel solo-desglose" style="margin-top:18px">
         <h2>Tabla foral frente a tramos, para tu sueldo actual</h2>
         <table>
           <tr class="th"><td></td><td class="n">Tabla foral</td><td class="n">Por tramos</td><td class="n">Diferencia</td></tr>
@@ -587,7 +628,7 @@ function retencionAnual(b,P,modo){
    ESTADO Y LECTURA
    ============================================================ */
 const $=id=>document.getElementById(id);
-const S={mode:'nomina',modoImporte:'anual',pagas:14,cobroExtra:'aparte',irpf:'tabla',
+const S={mode:'desglose',modoImporte:'anual',pagas:14,cobroExtra:'aparte',irpf:'tabla',
          subidas:[{pct:3,desde:'2027-01'}],overrides:{}};
 const num=id=>{const v=parseFloat($(id).value);return isFinite(v)?v:0;};
 
@@ -605,7 +646,7 @@ function leer(){
   const pctPlus=(pd[2]<=po[2]?0.15:0.15+(pd[2]-po[2]))+(nuclear?0.10:0);
   const subidas=S.subidas
     .map(s=>({pct:+s.pct||0,i:parseYM(s.desde)}))
-    .filter(s=>isFinite(s.i))
+    .filter(s=>isFinite(s.i)&&S.mode!=='desglose')
     .sort((x,y)=>x.i-y.i);
   const bMax=num('baseMax')||1e9;
   return {
@@ -824,7 +865,7 @@ $('quickSub').addEventListener('click',e=>{
   if(validas.length) i=Math.max(...validas)+12;
   else{
     const P=leer();
-    const base=S.mode==='estancia'&&P.salida?P.salida.y:(S.mode==='nomina'?P.anio:new Date().getFullYear());
+    const base=S.mode==='estancia'&&P.salida?P.salida.y:(S.mode==='subidas'?P.anio:new Date().getFullYear());
     i=(base+1)*12;
   }
   S.subidas.push({pct:+b.dataset.p,desde:ymKey(i)});
@@ -837,8 +878,7 @@ $('quickSub').addEventListener('click',e=>{
 function calc(){
   const P=leer();
   const body=document.body;
-  body.classList.toggle('m-nomina',S.mode==='nomina');
-  body.classList.toggle('m-estancia',S.mode==='estancia');
+  ['desglose','subidas','estancia'].forEach(m=>body.classList.toggle('m-'+m,S.mode===m));
   body.classList.toggle('p12',S.pagas===12);
   ['tabla','prog','manual','zero'].forEach(m=>body.classList.toggle('irpf-'+m,S.irpf===m));
 
@@ -860,7 +900,7 @@ function calc(){
     :'';
 
   guardarLocal();
-  if(S.mode==='nomina') pintarNomina(P); else pintarEstancia(P);
+  if(S.mode==='estancia') pintarEstancia(P); else pintarNomina(P);
 }
 
 /* ---------------- NÓMINA ---------------- */
@@ -899,6 +939,9 @@ function pintarNomina(P){
     }
     $('nTramoNota').innerHTML=t;
   }else $('nTramoNota').innerHTML='';
+
+  /* nómina línea a línea */
+  pintarLineas(P,R,aparte);
 
   /* reparto mensualidad / extra / año */
   const tt=$('nTablaReparto');
@@ -955,12 +998,23 @@ function pintarNomina(P){
         ' y cada extra de '+eur(pasos[0].R.netoExtra)+' a '+eur(fin.R.netoExtra)+'.':'');
   }
   $('nRecorridoNota').innerHTML=nota;
+  $('sHeroNeto').innerHTML=eur(fin.R.netoMes).replace(' €','<span> €</span>');
+  $('sHeroLab').textContent=pasos.length>1
+    ?'líquido de una mensualidad tras las subidas, frente a '+eur(pasos[0].R.netoMes)+' hoy'
+    :'líquido de una mensualidad hoy (sin subidas añadidas)';
+  $('sHeroExtraBox').style.display=aparte?'':'none';
+  $('sHeroExtra').textContent=eur(fin.R.netoExtra);
+  $('sHeroExtraLab').textContent='líquido de cada paga extra'+(pasos.length>1?', frente a '+eur(pasos[0].R.netoExtra):'');
+  $('sHeroBruto').textContent=eur0(fin.b);
+  $('sHeroBrutoLab').textContent=pasos.length>1?'bruto anual al final, desde '+eur0(P.salario0):'bruto anual';
+  $('sHeroGana').textContent=signo(fin.R.neto-pasos[0].R.neto,eur0);
   dibujarNeto(P,pasos);
 
   /* calendario del año */
-  const A=simularAnio(P,P.anio,false);
-  $('nCalTag').textContent='· año '+P.anio+' con las subidas en su fecha';
-  $('nCalendario').innerHTML=tablaAnio(A,P,false,true);
+  const yFin=Math.min(P.anio+9,Math.max(P.anio,...P.subidas.map(x=>Math.floor(x.i/12))));
+  const cal=[]; for(let y=P.anio;y<=yFin;y++) cal.push(simularAnio(P,y,false));
+  $('nCalTag').textContent='· '+(yFin>P.anio?P.anio+'–'+yFin:P.anio)+', con cada subida en su fecha';
+  $('nCalendario').innerHTML=cal.map(A=>tablaAnio(A,P,false,false)).join('');
 
   /* comparativa */
   const U=motor(P.salario0,P,'tabla'), G=motor(P.salario0,P,'prog');
@@ -970,6 +1024,37 @@ function pintarNomina(P){
   $('cUn').textContent=eur0(U.neto); $('cPn').textContent=eur0(G.neto);
   $('cDn').textContent=signo(G.neto-U.neto,eur0);
   dibujarTipo(P);
+}
+
+function pintarLineas(P,R,aparte){
+  const b=P.salario0, salBase=b/P.pagas;
+  const baseCot=clampBase(b/12,P);
+  const desglosar=Math.abs(P.tSS-0.065)<1e-6;
+  const conceptos=desglosar
+    ?[['Contingencias comunes',0.047],['Mecanismo de equidad intergeneracional (MEI)',0.0015],
+      ['Desempleo',0.0155],['Formación profesional',0.001]]
+    :[['Seguridad Social',P.tSS]];
+  const c2=aparte;
+  const cel=(a,x)=>'<td class="n">'+a+'</td>'+(c2?'<td class="n">'+(x==null?'—':x)+'</td>':'');
+  const pctTxt=f=>nfx.format(f*100)+' %';
+  let h='<tr class="th"><td></td><td class="n">'+(c2?'Mensualidad':'Cada mes')+'</td>'+(c2?'<td class="n">Paga extra</td>':'')+'</tr>';
+  h+='<tr class="sec"><td colspan="'+(c2?3:2)+'">Devengos</td></tr>';
+  h+='<tr><td>Salario base</td>'+cel(eur(salBase),eur(salBase))+'</tr>';
+  if(P.pagas===14&&P.prorr) h+='<tr><td>Prorrata de pagas extras <span class="tag">2 × '+eur(salBase)+' ÷ 12</span></td>'+cel(eur(salBase*2/12))+'</tr>';
+  h+='<tr class="total"><td>Total devengado</td>'+cel(eur(R.brutoMes),eur(R.brutoExtra))+'</tr>';
+  h+='<tr class="sec"><td colspan="'+(c2?3:2)+'">Bases</td></tr>';
+  h+='<tr><td>Base de cotización <span class="tag">'+(P.pagas===14?'incluye la prorrata de extras':'')+
+    (baseCot!==b/12?(baseCot===P.bMax?' · topada en la máxima':' · subida a la mínima'):'')+'</span></td>'+cel(eur(baseCot),'no cotiza')+'</tr>';
+  h+='<tr><td>Base de retención IRPF</td>'+cel(eur(R.brutoMes),eur(R.brutoExtra))+'</tr>';
+  h+='<tr class="sec"><td colspan="'+(c2?3:2)+'">Deducciones</td></tr>';
+  for(const [n,t] of conceptos) h+='<tr class="neg"><td>'+n+' <span class="tag">'+pctTxt(t)+'</span></td>'+cel('−'+eur(baseCot*t),null)+'</tr>';
+  h+='<tr class="neg"><td>IRPF <span class="tag">'+textoTipo(R,P)+'</span></td>'+cel('−'+eur(R.irpfMes),'−'+eur(R.irpfExtra))+'</tr>';
+  h+='<tr class="neg"><td>Total deducciones</td>'+cel('−'+eur(R.ss+R.irpfMes),'−'+eur(R.irpfExtra))+'</tr>';
+  h+='<tr class="total"><td>Líquido a percibir</td>'+cel(eur(R.netoMes),eur(R.netoExtra))+'</tr>';
+  $('nNomina').innerHTML=h;
+  $('nNominaNota').innerHTML=(desglosar?'Cuotas del trabajador en 2026 con contrato indefinido. ':'')+
+    'La empresa aporta además <b>'+eur(baseCot*P.tEmp)+'</b> al mes de cotización a su cargo.'+
+    (aparte?' La paga extra no cotiza cuando se cobra porque ya va prorrateada en la base de cada mes.':'');
 }
 
 /* ---------------- ESTANCIA ---------------- */
@@ -1190,7 +1275,8 @@ function estado(){
 function aplicarEstado(st){
   if(!st||!st.S)return;
   const s=st.S;
-  if(['nomina','estancia'].includes(s.mode))S.mode=s.mode;
+  if(s.mode==='nomina')S.mode='desglose';
+  else if(['desglose','subidas','estancia'].includes(s.mode))S.mode=s.mode;
   if(['anual','paga'].includes(s.modoImporte))S.modoImporte=s.modoImporte;
   if([12,14].includes(+s.pagas))S.pagas=+s.pagas;
   if(['aparte','prorr'].includes(s.cobroExtra))S.cobroExtra=s.cobroExtra;
@@ -1249,7 +1335,7 @@ $('btnExcel').addEventListener('click',()=>{
 
   const par=[
     ['Calculadora de nómina y estancias · IDOM Bizkaia'],['Generado',new Date().toLocaleDateString('es-ES')],[],
-    ['Modo',S.mode==='nomina'?'Nómina':'Estancia'],
+    ['Modo',{desglose:'Desglose de nómina',subidas:'Subidas de sueldo',estancia:'Estancia'}[S.mode]],
     ['Salario bruto anual actual',P.salario0],['Pagas',P.pagas],
     ['Pagas extras',P.pagas===14?(P.prorr?'Prorrateadas':'Aparte, en '+P.extraMeses.map(m=>MESES_L[m-1]).join(' y ')):'—'],
     ['IRPF',{tabla:'Tabla foral Bizkaia 2026',prog:'Por tramos (simulación)',manual:'Manual',zero:'0 %'}[P.irpf]],
@@ -1271,7 +1357,7 @@ $('btnExcel').addEventListener('click',()=>{
   }),'Parámetros');
 
   let anios;
-  if(S.mode==='nomina') anios=[simularAnio(P,P.anio,false)];
+  if(S.mode!=='estancia') anios=[simularAnio(P,S.mode==='subidas'?P.anio:new Date().getFullYear(),false)];
   else{
     if(!P.salida||!P.regreso){ alert('Revisa las fechas de la estancia.'); return; }
     anios=[]; for(let y=P.salida.y;y<=P.regreso.y;y++) anios.push(simularAnio(P,y,true));
@@ -1286,7 +1372,7 @@ $('btnExcel').addEventListener('click',()=>{
   XLSX.utils.book_append_sheet(wb,hoja(cal,[6,11,13,22,8,12,12,12,12,12,9,12,12,12],
     (r,c)=>r===0?null:c===10?PCT:(c>=5?EUR:null)),'Mes a mes');
 
-  if(S.mode==='nomina'){
+  if(S.mode==='subidas'){
     const rows=[['Momento','Desde','Bruto anual','Mensualidad bruta','Extra bruta','Tipo IRPF','Líquido mensualidad','Líquido extra','Líquido anual']];
     let b=P.salario0;
     const add=(et,desde)=>{const R=motor(b,P);rows.push([et,desde,b,R.brutoMes,R.brutoExtra,R.tipo,R.netoMes,R.netoExtra,R.neto]);};
@@ -1294,7 +1380,7 @@ $('btnExcel').addEventListener('click',()=>{
     P.subidas.forEach((s,k)=>{ b*=1+s.pct/100; add('Subida '+(k+1)+' (+'+s.pct+' %)',ymKey(s.i)); });
     XLSX.utils.book_append_sheet(wb,hoja(rows,[20,10,14,16,14,10,18,14,14],
       (r,c)=>r===0?null:c===5?PCT:(c>=2?EUR:null)),'Subidas');
-  }else{
+  }else if(S.mode==='estancia'){
     const con=anios.flatMap(a=>a.meses);
     const sinM=[]; for(let y=P.salida.y;y<=P.regreso.y;y++) sinM.push(...simularAnio(P,y,false).meses);
     const TC=totales(con,P), TS=totales(sinM,P);
