@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculadora de nómina · Bizkaia 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E6EAE0;
+    --card:#FBFBF7;
+    --ink:#17201A;
+    --muted:#6A7970;
+    --line:#C8D0C2;
+    --line-soft:#E0E5DA;
+    --red:#A31E24;
+    --teal:#1E5148;
+    --gold:#8A6A28;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Instrument Sans",system-ui,sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 64px}
+
+  header{border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:26px}
+  h1{font-size:26px;font-weight:600;letter-spacing:-.02em;margin:0 0 4px}
+  header p{margin:0;color:var(--muted);max-width:62ch;font-size:14px}
+
+  .grid{display:grid;grid-template-columns:330px 1fr;gap:24px;align-items:start}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .panel{background:var(--card);border:1px solid var(--line);padding:20px}
+  .panel + .panel{margin-top:18px}
+
+  .field{margin-bottom:18px}
+  .field:last-child{margin-bottom:0}
+  label.lab{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .hint{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4}
+
+  input[type=number],select{
+    width:100%;font:inherit;font-variant-numeric:tabular-nums;
+    padding:9px 10px;border:1px solid var(--line);background:#fff;color:var(--ink);
+    border-radius:2px;
+  }
+  input[type=number]:focus,select:focus,.seg button:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+  .big-input{font-size:22px;font-weight:600;padding:10px}
+
+  .seg{display:flex;border:1px solid var(--line);border-radius:2px;overflow:hidden;background:#fff}
+  .seg button{
+    flex:1;font:inherit;font-size:13px;padding:8px 4px;border:0;background:#fff;color:var(--muted);
+    cursor:pointer;border-right:1px solid var(--line-soft);
+  }
+  .seg button:last-child{border-right:0}
+  .seg button[aria-pressed=true]{background:var(--ink);color:#fff;font-weight:600}
+
+  details{margin-top:18px;border-top:1px solid var(--line-soft);padding-top:12px}
+  summary{cursor:pointer;font-size:13px;color:var(--muted)}
+  summary:hover{color:var(--ink)}
+  .adv{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+  .adv .field{margin-bottom:0}
+  .adv label.lab{font-size:11.5px;font-weight:500;color:var(--muted)}
+  .adv input{padding:6px 8px;font-size:13px}
+  .check{grid-column:1/-1;display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--muted)}
+  .check input{margin-top:3px}
+
+  /* results */
+  .hero{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--teal);padding:22px 24px}
+  .hero .row{display:flex;flex-wrap:wrap;gap:34px;align-items:baseline}
+  .figure{font-family:"Instrument Serif",Georgia,serif;font-size:58px;line-height:.95;letter-spacing:-.01em;color:var(--teal)}
+  .figure span{font-size:26px}
+  .fig-lab{font-size:13px;color:var(--muted);margin-top:8px;max-width:30ch}
+  .sub{font-family:"Instrument Serif",Georgia,serif;font-size:30px;line-height:1;color:var(--ink)}
+  .sub-lab{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+  @media (max-width:720px){.cols{grid-template-columns:1fr}}
+
+  h2{font-size:14px;font-weight:600;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td{padding:6px 0;border-bottom:1px solid var(--line-soft);vertical-align:baseline}
+  td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  tr.total td{border-bottom:0;border-top:2px solid var(--ink);font-weight:700;padding-top:9px}
+  tr.neg td.n{color:var(--red)}
+  .tag{font-size:12px;color:var(--muted)}
+  .th td{color:var(--muted);font-size:12px;border-bottom:1px solid var(--line)}
+
+  .note{margin-top:14px;font-size:13px;line-height:1.5;color:var(--muted);border-left:2px solid var(--gold);padding-left:12px}
+  .note b{color:var(--ink);font-weight:600}
+
+  .chartbox{margin-top:18px}
+  .scrollx{overflow-x:auto}
+  .scrollx table{min-width:620px}
+  td.sep{border-left:1px solid var(--line)}
+
+  .subida-bar{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-bottom:14px}
+
+  .esc-row{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+  .esc-row:first-child{border-top:1px solid var(--line-soft)}
+  .esc-num{font-size:12px;color:var(--muted);width:68px;flex:0 0 auto}
+  .esc-val{width:110px;font-size:16px;font-weight:600;padding:6px 8px}
+  .esc-row .seg{width:104px;flex:0 0 auto}
+  .esc-row .seg button{padding:6px 2px;font-size:12px}
+  .esc-eq{font-size:12.5px;color:var(--muted);flex:1 1 140px}
+  .esc-del{
+    border:0;background:none;color:var(--muted);font-size:18px;line-height:1;
+    cursor:pointer;padding:4px 6px;border-radius:2px;
+  }
+  .esc-del:hover{color:var(--red);background:#F6E9E5}
+  .esc-vacia{padding:14px 0;color:var(--muted);font-size:13.5px;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)}
+  .quick{display:flex;gap:6px;flex-wrap:wrap;padding-bottom:2px}
+  .quick button{
+    font:inherit;font-size:13px;padding:7px 11px;border:1px solid var(--line);background:#fff;
+    color:var(--ink);cursor:pointer;border-radius:2px;
+  }
+  .quick button:hover{border-color:var(--ink)}
+  .quick button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .figs{display:flex;flex-wrap:wrap;gap:32px;padding:16px 0;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)}
+  td.warn{color:var(--red);font-weight:600}
+  tr.cliff td{background:#F6E9E5}
+  .legend{display:flex;gap:18px;font-size:12.5px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap}
+  .key{display:inline-block;width:18px;height:2px;vertical-align:middle;margin-right:6px}
+  svg{display:block;width:100%;height:auto}
+
+  footer{margin-top:28px;font-size:12.5px;color:var(--muted);line-height:1.6;max-width:78ch}
+  footer p{margin:0 0 8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>De bruto a líquido, con la tabla de Bizkaia 2026</h1>
+  <p>Pon lo que ganas, elige 12 o 14 pagas y mira qué queda. Puedes comparar el tipo único de la tabla foral —el que aplica de verdad tu nómina— con una retención progresiva por tramos.</p>
+</header>
+
+<div class="grid">
+
+  <!-- ============ CONTROLES ============ -->
+  <form class="panel" id="form" onsubmit="return false">
+    <div class="field">
+      <label class="lab" for="importe">Salario bruto</label>
+      <input class="big-input" type="number" id="importe" value="24500" min="0" step="100">
+      <div class="seg" style="margin-top:8px" id="segModo">
+        <button type="button" data-v="anual" aria-pressed="true">Al año</button>
+        <button type="button" data-v="paga" aria-pressed="false">Por paga</button>
+      </div>
+      <div class="hint" id="hintModo"></div>
+    </div>
+
+    <div class="field">
+      <label class="lab">Número de pagas</label>
+      <div class="seg" id="segPagas">
+        <button type="button" data-v="12" aria-pressed="false">12 pagas</button>
+        <button type="button" data-v="14" aria-pressed="true">14 pagas</button>
+      </div>
+      <div class="hint">Con 14 pagas cobras dos extras. El total del año no cambia: cambia cómo se reparte.</div>
+    </div>
+
+    <div class="field">
+      <label class="lab" for="desc">Descendientes a tu cargo</label>
+      <select id="desc">
+        <option value="0" selected>Ninguno</option>
+        <option value="1">1</option><option value="2">2</option>
+        <option value="3">3</option><option value="4">4</option>
+        <option value="5">5</option><option value="6">6 o más</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="lab" for="disc">Discapacidad reconocida</label>
+      <select id="disc">
+        <option value="0" selected>No procede</option>
+        <option value="1">Apartado 4.a)</option>
+        <option value="2">Apartados 4.b) y 4.c)</option>
+      </select>
+      <div class="hint">Resta puntos al tipo de la tabla general.</div>
+    </div>
+
+    <div class="field">
+      <label class="lab">Cómo se calcula el IRPF</label>
+      <div class="seg" id="segModoIrpf">
+        <button type="button" data-v="unico" aria-pressed="true">Tipo único</button>
+        <button type="button" data-v="prog" aria-pressed="false">Por tramos</button>
+      </div>
+      <div class="hint" id="hintIrpf"></div>
+    </div>
+
+    <details>
+      <summary>Ajustes de cotización</summary>
+      <div class="adv">
+        <div class="field">
+          <label class="lab" for="tipoSS">Cuota obrera (%)</label>
+          <input type="number" id="tipoSS" value="6.50" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label class="lab" for="tipoEmp">Cuota empresa (%)</label>
+          <input type="number" id="tipoEmp" value="32.30" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label class="lab" for="baseMin">Base mínima (€/mes)</label>
+          <input type="number" id="baseMin" value="1649.70" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label class="lab" for="baseMax">Base máxima (€/mes)</label>
+          <input type="number" id="baseMax" value="5101.20" step="0.01" min="0">
+        </div>
+        <div class="check">
+          <input type="checkbox" id="prorrateo" checked>
+          <label for="prorrateo">Pagas extras prorrateadas en la base de cotización (así aparece en tu nómina)</label>
+        </div>
+      </div>
+    </details>
+  </form>
+
+  <!-- ============ RESULTADOS ============ -->
+  <div>
+    <div class="hero">
+      <div class="row">
+        <div>
+          <div class="figure" id="heroNeto">—</div>
+          <div class="fig-lab" id="heroLab">líquido en un mes normal</div>
+        </div>
+        <div>
+          <div class="sub" id="heroAnual">—</div>
+          <div class="sub-lab">líquido al año</div>
+        </div>
+        <div>
+          <div class="sub" id="heroTipo">—</div>
+          <div class="sub-lab" id="heroTipoLab">retención IRPF</div>
+        </div>
+      </div>
+      <div class="note" id="tramoNota"></div>
+    </div>
+
+    <div class="cols">
+      <div class="panel">
+        <h2>Cuentas del año</h2>
+        <table>
+          <tr><td>Bruto anual</td><td class="n" id="aBruto">—</td></tr>
+          <tr class="neg"><td>Seguridad Social <span class="tag" id="aSSpct"></span></td><td class="n" id="aSS">—</td></tr>
+          <tr class="neg"><td>Retención IRPF <span class="tag" id="aIRPFpct"></span></td><td class="n" id="aIRPF">—</td></tr>
+          <tr class="total"><td>Líquido anual</td><td class="n" id="aNeto">—</td></tr>
+        </table>
+        <div class="note" id="costeNota"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Cómo se reparte cada mes</h2>
+        <table id="tablaMeses"></table>
+        <div class="note" id="repartoNota"></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:18px">
+      <h2>Qué neto te queda según suba el sueldo</h2>
+      <div class="subida-bar">
+        <div>
+          <label class="lab">Añadir subida</label>
+          <div class="seg" id="segSubidaTipo" style="width:170px">
+            <button type="button" data-v="eur" aria-pressed="true">€ al año</button>
+            <button type="button" data-v="pct" aria-pressed="false">%</button>
+          </div>
+        </div>
+        <div class="quick" id="quick"></div>
+      </div>
+      <div id="escalera"></div>
+      <div class="hint" id="hintSubida"></div>
+
+      <div class="figs" style="margin-top:16px">
+        <div><div class="sub" id="sBrutoFin">—</div><div class="sub-lab">bruto al final del recorrido</div></div>
+        <div><div class="sub" style="color:var(--red)" id="sMesUnico">—</div><div class="sub-lab">al mes con el tipo único de la tabla</div></div>
+        <div><div class="sub" style="color:var(--teal)" id="sMesProg">—</div><div class="sub-lab">al mes si la retención fuese por tramos</div></div>
+      </div>
+
+      <table style="margin-top:16px" id="tablaComparativa"></table>
+      <div class="note" id="subidaNota"></div>
+
+      <h2 style="margin-top:24px">El recorrido, paso a paso</h2>
+      <div class="scrollx"><table id="tablaEscenarios"></table></div>
+
+      <div class="chartbox">
+        <div class="legend">
+          <span><span class="key" style="background:var(--red)"></span>Líquido con el tipo único</span>
+          <span><span class="key" style="background:var(--teal)"></span>Líquido si fuese por tramos</span>
+          <span><span class="key" style="background:var(--ink)"></span>Hoy y cada subida</span>
+        </div>
+        <svg id="chartNeto" viewBox="0 0 760 300" role="img" aria-label="Líquido anual en función del salario bruto"></svg>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:18px">
+      <h2>Tipo único frente a tramos, para tu sueldo</h2>
+      <table>
+        <tr class="th"><td></td><td class="n">Tipo único</td><td class="n">Por tramos</td><td class="n">Diferencia</td></tr>
+        <tr><td>Retención del año</td><td class="n" id="cU">—</td><td class="n" id="cP">—</td><td class="n" id="cD">—</td></tr>
+        <tr><td>Tipo medio</td><td class="n" id="cUt">—</td><td class="n" id="cPt">—</td><td class="n"></td></tr>
+        <tr class="total"><td>Líquido anual</td><td class="n" id="cUn">—</td><td class="n" id="cPn">—</td><td class="n" id="cDn">—</td></tr>
+      </table>
+
+      <div class="chartbox">
+        <div class="legend">
+          <span><span class="key" style="background:var(--red)"></span>Tipo único de la tabla</span>
+          <span><span class="key" style="background:var(--teal)"></span>Tipo medio si fuese por tramos</span>
+          <span><span class="key" style="background:var(--ink)"></span>Tu sueldo</span>
+        </div>
+        <svg id="chart" viewBox="0 0 760 300" role="img" aria-label="Comparación del tipo de retención según el salario bruto anual"></svg>
+      </div>
+    </div>
+
+    <footer>
+      <p>La tabla es la de retenciones sobre trabajo personal de la Diputación Foral de Bizkaia vigente desde el 01/01/2026. Bases de cotización 2026: mínima del grupo 2 y máxima de 5.101,20 €/mes. La cuota obrera del 6,50 % sale de contingencias comunes 4,70 + MEI 0,15 + desempleo, FOGASA y formación 1,65.</p>
+      <p>El modo por tramos no existe en la normativa foral: aplica los porcentajes de esa misma tabla de forma marginal, solo para ver el contraste. La retención es un pago a cuenta; la cuota definitiva sale en la declaración, con la escala del IRPF, las reducciones por rendimientos del trabajo y las deducciones personales y familiares. El resultado real de la renta puede diferir de lo retenido.</p>
+    </footer>
+  </div>
+</div>
+</div>
+
+<script>
+/* ---------- Tabla general de retención, Bizkaia 2026 ----------
+   [hasta, [0,1,2,3,4,5,6+ descendientes]] */
+const TABLA=[
+[20000,[0,0,0,0,0,0,0]],[20510,[7,5,3,0,0,0,0]],[21300,[8,6,4,1,0,0,0]],
+[22150,[9,7,5,2,0,0,0]],[23220,[10,9,7,4,0,0,0]],[24050,[11,10,8,5,1,0,0]],
+[25410,[12,11,9,6,3,0,0]],[27440,[13,12,10,7,4,0,0]],[29790,[14,13,11,9,6,2,0]],
+[32610,[15,14,13,10,8,4,0]],[36350,[16,15,14,12,9,6,0]],[40670,[17,16,15,13,11,8,0]],
+[44560,[18,17,16,15,13,10,2]],[48060,[19,18,17,16,14,12,4]],[52020,[20,19,18,17,15,13,7]],
+[56780,[21,20,20,18,17,15,9]],[61820,[22,21,21,20,18,16,11]],[65710,[23,22,22,21,19,18,12]],
+[70080,[24,23,23,22,21,19,14]],[75020,[25,25,24,23,22,20,16]],[80730,[26,26,25,24,23,22,17]],
+[86770,[27,27,26,25,24,23,19]],[92190,[28,28,27,26,25,24,21]],[98350,[29,29,28,27,27,25,22]],
+[105380,[30,30,29,29,28,27,23]],[113180,[31,31,30,30,29,28,25]],[122030,[32,32,31,31,30,29,26]],
+[132200,[33,33,32,32,31,30,28]],[144140,[34,34,33,33,32,32,29]],[157300,[35,35,34,34,33,33,31]],
+[172280,[36,36,36,35,35,34,32]],[190410,[37,37,37,36,36,35,33]],[212820,[38,38,38,37,37,36,35]],
+[236060,[39,39,39,38,38,37,36]],[Infinity,[40,40,40,39,39,39,37]]];
+
+/* Reducciones por discapacidad: [hasta, [apartado 4.a), apartados 4.b) y 4.c)]] */
+const DISCAP=[[25410,[9,12]],[32610,[7,12]],[48060,[6,10]],[56780,[5,10]],
+[80730,[4,8]],[122030,[3,6]],[190410,[2,5]],[Infinity,[1,3]]];
+
+const eur=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n)+' €';
+const eur0=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(n)+' €';
+const pct=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n)+' %';
+
+function fila(bruto){return TABLA.find(r=>bruto<=r[0]);}
+function reduccion(bruto,disc){return disc===0?0:DISCAP.find(r=>bruto<=r[0])[1][disc-1];}
+function tipoUnico(bruto,desc,disc){
+  return Math.max(0,fila(bruto)[1][Math.min(desc,6)]-reduccion(bruto,disc));
+}
+function irpfProgresivo(bruto,desc,disc){
+  let acc=0,prev=0;
+  for(const r of TABLA){
+    const top=Math.min(bruto,r[0]);
+    if(top>prev){
+      const t=Math.max(0,r[1][Math.min(desc,6)]-reduccion(prev+0.01,disc));
+      acc+=(top-prev)*t/100; prev=top;
+    }
+    if(bruto<=r[0])break;
+  }
+  return acc;
+}
+
+const $=id=>document.getElementById(id);
+const state={modo:'anual',pagas:14,irpf:'unico',subidaTipo:'eur'};
+
+function seg(idBox,key,cast){
+  $(idBox).addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    [...$(idBox).querySelectorAll('button')].forEach(x=>x.setAttribute('aria-pressed',x===b));
+    state[key]=cast?cast(b.dataset.v):b.dataset.v; calc();
+  });
+}
+seg('segModo','modo');
+seg('segPagas','pagas',Number);
+seg('segModoIrpf','irpf');
+['importe','desc','disc','tipoSS','tipoEmp','baseMin','baseMax','prorrateo']
+  .forEach(id=>$(id).addEventListener('input',calc));
+
+/* ---------- escalera de subidas ---------- */
+let escalera=[{v:1500,u:'eur'}];
+const QUICK={eur:[500,1000,2000,3000,5000],pct:[1,2,3,5,10]};
+const milar=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:2}).format(n);
+
+function pintaQuick(){
+  $('quick').innerHTML=QUICK[state.subidaTipo].map(v=>
+    `<button type="button" data-v="${v}">+${milar(v)}${state.subidaTipo==='eur'?' €':' %'}</button>`).join('');
+}
+function pintaEscalera(){
+  if(!escalera.length){
+    $('escalera').innerHTML='<div class="esc-vacia">Sin subidas. Añade una con los botones de arriba para ver cómo evoluciona.</div>';
+    return;
+  }
+  $('escalera').innerHTML=escalera.map((s,i)=>`
+    <div class="esc-row" data-i="${i}">
+      <span class="esc-num">Subida ${i+1}</span>
+      <input type="number" class="esc-val" value="${s.v}" min="0" step="${s.u==='eur'?100:0.5}">
+      <div class="seg">
+        <button type="button" data-u="eur" aria-pressed="${s.u==='eur'}">€</button>
+        <button type="button" data-u="pct" aria-pressed="${s.u==='pct'}">%</button>
+      </div>
+      <span class="esc-eq" data-eq="${i}"></span>
+      <button type="button" class="esc-del" title="Quitar esta subida" aria-label="Quitar subida ${i+1}">×</button>
+    </div>`).join('');
+}
+$('escalera').addEventListener('input',e=>{
+  if(!e.target.classList.contains('esc-val'))return;
+  escalera[+e.target.closest('.esc-row').dataset.i].v=Math.max(0,parseFloat(e.target.value)||0);
+  calc();
+});
+$('escalera').addEventListener('click',e=>{
+  const fila=e.target.closest('.esc-row'); if(!fila)return;
+  const i=+fila.dataset.i;
+  if(e.target.closest('.esc-del')){ escalera.splice(i,1); pintaEscalera(); calc(); return; }
+  const u=e.target.closest('button[data-u]');
+  if(u&&escalera[i].u!==u.dataset.u){
+    const eu=u.dataset.u==='eur';
+    escalera[i]={v:eu?1000:3,u:u.dataset.u};
+    pintaEscalera(); calc();
+  }
+});
+$('quick').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  escalera.push({v:+b.dataset.v,u:state.subidaTipo});
+  pintaEscalera(); calc();
+});
+$('segSubidaTipo').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b||b.dataset.v===state.subidaTipo)return;
+  [...$('segSubidaTipo').querySelectorAll('button')].forEach(x=>x.setAttribute('aria-pressed',x===b));
+  state.subidaTipo=b.dataset.v; pintaQuick();
+});
+pintaQuick(); pintaEscalera();
+
+/* Motor: dado un bruto anual y los parámetros, devuelve la nómina completa.
+   Se reutiliza para simular cualquier otro sueldo. */
+function motor(b,P){
+  const clamp=x=>Math.min(Math.max(x,P.bMin),P.bMax);
+  const tU=tipoUnico(b,P.desc,P.disc);
+  const irpf=P.modo==='unico'?b*tU/100:irpfProgresivo(b,P.desc,P.disc);
+  const tipoMedio=b>0?irpf/b*100:0;
+  const brutoPaga=b/P.n;
+  let ssNormal,ssExtra,baseNormal;
+  if(P.n===12||P.prorr){
+    baseNormal=clamp(b/12); ssNormal=baseNormal*P.tSS; ssExtra=0;
+  }else{
+    baseNormal=clamp(brutoPaga); ssNormal=baseNormal*P.tSS;
+    ssExtra=clamp(brutoPaga*2)*P.tSS-ssNormal;
+  }
+  const ssAnual=ssNormal*12+ssExtra*(P.n===14?2:0);
+  const irpfNormal=brutoPaga*tipoMedio/100;
+  return {b,tU,irpf,tipoMedio,ssNormal,ssExtra,ssAnual,baseNormal,brutoPaga,irpfNormal,
+          neto:b-ssAnual-irpf,
+          netoNormal:brutoPaga-ssNormal-irpfNormal,
+          netoExtra:brutoPaga-ssExtra-irpfNormal};
+}
+
+function calc(){
+  const imp=Math.max(0,parseFloat($('importe').value)||0);
+  const n=state.pagas;
+  const bruto=state.modo==='anual'?imp:imp*n;
+  const desc=+$('desc').value, disc=+$('disc').value;
+  const tSS=(parseFloat($('tipoSS').value)||0)/100;
+  const tEmp=(parseFloat($('tipoEmp').value)||0)/100;
+  const bMin=parseFloat($('baseMin').value)||0, bMax=parseFloat($('baseMax').value)||1e9;
+  const prorr=$('prorrateo').checked;
+
+  $('hintModo').textContent=state.modo==='anual'
+    ? 'Total del año antes de descuentos: '+eur0(bruto)
+    : 'Cada paga bruta × '+n+' pagas = '+eur0(bruto)+' al año';
+  $('hintIrpf').textContent=state.irpf==='unico'
+    ? 'Un solo porcentaje sobre todo el salario. Es el sistema real de Bizkaia.'
+    : 'Cada tramo tributa a su propio porcentaje. Simulación, no es lo que aplica la nómina.';
+
+  const P={desc,disc,tSS,tEmp,bMin,bMax,n,prorr,modo:state.irpf};
+  const R=motor(bruto,P);
+  const {tU,irpf,tipoMedio,ssNormal,ssExtra,ssAnual,baseNormal,brutoPaga,
+         neto,netoNormal,netoExtra,irpfNormal}=R;
+  const irpfU=bruto*tU/100, irpfP=irpfProgresivo(bruto,desc,disc);
+  const costeEmpresa=tSS>0?ssAnual/tSS*tEmp:0;
+
+  /* --- pintar --- */
+  $('heroNeto').innerHTML=eur(netoNormal).replace(' €','<span> €</span>');
+  $('heroLab').textContent=n===14
+    ? 'líquido en un mes normal, de los doce sin extra'
+    : 'líquido cada mes, las doce veces';
+  $('heroAnual').textContent=eur0(neto);
+  $('heroTipo').textContent=state.irpf==='unico'?pct(tU):pct(tipoMedio);
+  $('heroTipoLab').textContent=state.irpf==='unico'?'tipo de retención':'tipo medio por tramos';
+
+  $('aBruto').textContent=eur(bruto);
+  $('aSS').textContent='−'+eur(ssAnual);
+  $('aSSpct').textContent=(tSS*100).toFixed(2).replace('.',',')+' %';
+  $('aIRPF').textContent='−'+eur(irpf);
+  $('aIRPFpct').textContent=state.irpf==='unico'?tU+' %':'tipo medio '+pct(tipoMedio);
+  $('aNeto').textContent=eur(neto);
+  $('costeNota').innerHTML='Le cuestas a la empresa <b>'+eur0(bruto+costeEmpresa)+'</b> al año: tu bruto más '+eur0(costeEmpresa)+' de cotización a su cargo.';
+
+  const t=$('tablaMeses');
+  if(n===14){
+    t.innerHTML=`
+      <tr class="th"><td></td><td class="n">Nómina normal</td><td class="n">Paga extra</td><td class="n">Mes de la extra</td></tr>
+      <tr><td>Bruto</td><td class="n">${eur(brutoPaga)}</td><td class="n">${eur(brutoPaga)}</td><td class="n">${eur(brutoPaga*2)}</td></tr>
+      <tr class="neg"><td>Seguridad Social</td><td class="n">−${eur(ssNormal)}</td><td class="n">${ssExtra?'−'+eur(ssExtra):'—'}</td><td class="n">−${eur(ssNormal+ssExtra)}</td></tr>
+      <tr class="neg"><td>IRPF</td><td class="n">−${eur(irpfNormal)}</td><td class="n">−${eur(irpfNormal)}</td><td class="n">−${eur(irpfNormal*2)}</td></tr>
+      <tr class="total"><td>Líquido</td><td class="n">${eur(netoNormal)}</td><td class="n">${eur(netoExtra)}</td><td class="n">${eur(netoNormal+netoExtra)}</td></tr>`;
+    $('repartoNota').innerHTML='La extra llega como una nómina aparte, dos veces al año. '+(prorr
+      ? 'Al ir prorrateada, ya cotizaste por ella todos los meses sobre una base de <b>'+eur(baseNormal)+'</b>, así que en esa nómina no se descuenta Seguridad Social: solo el '+(state.irpf==='unico'?tU+' %':'tipo medio')+' de IRPF.'
+      : 'Sin prorrateo, la extra cotiza en el mes en que se paga y puede topar contra la base máxima.');
+  }else{
+    t.innerHTML=`
+      <tr class="th"><td></td><td class="n">Cada uno de los 12 meses</td></tr>
+      <tr><td>Bruto</td><td class="n">${eur(brutoPaga)}</td></tr>
+      <tr class="neg"><td>Seguridad Social</td><td class="n">−${eur(ssNormal)}</td></tr>
+      <tr class="neg"><td>IRPF</td><td class="n">−${eur(irpfNormal)}</td></tr>
+      <tr class="total"><td>Líquido</td><td class="n">${eur(netoNormal)}</td></tr>`;
+    $('repartoNota').innerHTML='Doce pagas iguales. Mismo total anual que con catorce: '+eur0(neto)+' líquidos.';
+  }
+
+  /* comparativa */
+  $('cU').textContent=eur0(irpfU); $('cP').textContent=eur0(irpfP);
+  $('cD').textContent=(irpfP-irpfU>=0?'+':'−')+eur0(Math.abs(irpfP-irpfU));
+  $('cUt').textContent=pct(tU); $('cPt').textContent=pct(bruto>0?irpfP/bruto*100:0);
+  $('cUn').textContent=eur0(bruto-ssAnual-irpfU); $('cPn').textContent=eur0(bruto-ssAnual-irpfP);
+  $('cDn').textContent=(irpfU-irpfP>=0?'+':'−')+eur0(Math.abs(irpfU-irpfP));
+
+  /* salto de tramo */
+  const f=fila(bruto), techo=f[0];
+  if(bruto<20000.01){
+    $('tramoNota').innerHTML='Por debajo de 20.000 € no hay retención. Te quedan '+eur0(20000-bruto)+' de margen antes de empezar a retener.';
+  }else if(techo===Infinity){
+    $('tramoNota').innerHTML='Estás en el último tramo de la tabla.';
+  }else{
+    const sig=TABLA[TABLA.indexOf(f)+1];
+    const tSig=Math.max(0,sig[1][Math.min(desc,6)]-reduccion(techo+0.01,disc));
+    const extra=(techo+0.01)*tSig/100-(techo+0.01)*tU/100;
+    $('tramoNota').innerHTML='El tramo llega hasta <b>'+eur0(techo)+'</b>. Te faltan '+eur0(techo-bruto)+
+      ' para saltar al '+tSig+' %, y ese salto se aplica sobre todo el sueldo: unos <b>'+eur0(extra)+
+      '</b> más de retención al año por cruzar la línea.';
+  }
+
+  dibujar(bruto,desc,disc);
+  subidas(bruto,P,R);
+}
+
+/* ---------- Simulador de subidas ---------- */
+function subidas(bruto,P,R){
+  const Pu={...P,modo:'unico'}, Pp={...P,modo:'prog'};
+  const dosRegimenes=b=>({b,u:motor(b,Pu),p:motor(b,Pp)});
+
+  /* recorrido: hoy más cada subida acumulada */
+  const hoy=dosRegimenes(bruto);
+  const pasos=[]; let b=bruto;
+  for(const s of escalera){
+    const inc=s.u==='pct'?b*s.v/100:s.v;
+    b+=inc;
+    pasos.push({inc,u:s.u,v:s.v,...dosRegimenes(b)});
+  }
+  const fin=pasos.length?pasos[pasos.length-1]:hoy;
+  const incTotal=fin.b-bruto;
+
+  /* equivalencias en cada fila de la lista */
+  pasos.forEach((p,i)=>{
+    const eq=document.querySelector('[data-eq="'+i+'"]');
+    if(!eq)return;
+    const desde=i?pasos[i-1].b:bruto;
+    eq.textContent=(p.u==='pct'?eur(p.inc):(desde>0?(p.inc/desde*100).toFixed(2).replace('.',',')+' %':'—'))
+      +' · bruto '+eur0(p.b);
+  });
+
+  $('sBrutoFin').textContent=eur0(fin.b);
+  $('sMesUnico').textContent=eur(fin.u.netoNormal);
+  $('sMesProg').textContent=eur(fin.p.netoNormal);
+
+  $('hintSubida').textContent=pasos.length
+    ? pasos.length+(pasos.length===1?' subida: ':' subidas encadenadas: ')+eur0(bruto)+' → '+eur0(fin.b)+
+      ' de bruto, un '+(incTotal/bruto*100).toFixed(1).replace('.',',')+' % más.'
+    : 'Añade subidas para simular el recorrido. Cada una se aplica sobre el sueldo que deja la anterior.';
+
+  /* comparativa hoy / final bajo los dos regímenes */
+  const linea=(et,f,cl)=>`<tr class="${cl||''}"><td>${et}</td>
+    <td class="n">${f(hoy.u,'unico')}</td><td class="n sep">${f(fin.u,'unico')}</td><td class="n">${f(fin.p,'prog')}</td></tr>`;
+  $('tablaComparativa').innerHTML=
+    `<tr class="th"><td></td><td class="n">Hoy</td><td class="n sep">Al final, tipo único</td>
+      <td class="n">Al final, por tramos</td></tr>`+
+    linea('Bruto anual',r=>eur0(r.b))+
+    linea('Tipo de retención',(r,m)=>m==='unico'?r.tU+' %':pct(r.tipoMedio))+
+    linea('Seguridad Social',r=>'−'+eur0(r.ssAnual),'neg')+
+    linea('IRPF retenido',r=>'−'+eur0(r.irpf),'neg')+
+    linea('Líquido anual',r=>eur0(r.neto),'total')+
+    linea('Líquido al mes',r=>eur(r.netoNormal));
+
+  /* recorrido paso a paso, los dos regímenes en paralelo */
+  let filas='<tr class="th"><td>Momento</td><td class="n">Bruto</td>'+
+    '<td class="n sep">Tipo único</td><td class="n">Líquido al mes</td><td class="n">Ganas al mes</td>'+
+    '<td class="n sep">Por tramos</td><td class="n">Líquido al mes</td><td class="n">Diferencia</td></tr>';
+  const fila=(et,d,prev,cl)=>`<tr class="${cl||''}">
+    <td>${et}</td><td class="n">${eur0(d.b)}</td>
+    <td class="n sep">${d.u.tU} %</td>
+    <td class="n">${eur(d.u.netoNormal)}</td>
+    <td class="n ${prev&&d.u.netoNormal<prev.u.netoNormal?'warn':''}">${prev?(d.u.netoNormal-prev.u.netoNormal>=0?'+':'−')+eur(Math.abs(d.u.netoNormal-prev.u.netoNormal)):'—'}</td>
+    <td class="n sep">${pct(d.p.tipoMedio)}</td>
+    <td class="n">${eur(d.p.netoNormal)}</td>
+    <td class="n">+${eur(d.p.netoNormal-d.u.netoNormal)}</td></tr>`;
+  filas+=fila('Hoy',hoy,null);
+  let prev=hoy, malos=0;
+  pasos.forEach((d,i)=>{
+    const baja=d.u.netoNormal<prev.u.netoNormal; if(baja)malos++;
+    filas+=fila('Tras la subida '+(i+1),d,prev,baja?'cliff':'');
+    prev=d;
+  });
+  $('tablaEscenarios').innerHTML=filas;
+
+  /* lectura */
+  const dU=fin.u.neto-hoy.u.neto, dP=fin.p.neto-hoy.p.neto;
+  let nota;
+  if(!pasos.length){
+    nota='Con '+eur0(bruto)+' de bruto te quedan <b>'+eur(hoy.u.netoNormal)+'</b> al mes con el tipo único de la tabla, frente a '+
+      eur(hoy.p.netoNormal)+' si la retención se aplicase por tramos. La diferencia son '+eur0(hoy.p.neto-hoy.u.neto)+' al año.';
+  }else if(malos){
+    nota='<b>Hay '+(malos===1?'una subida que te deja':malos+' subidas que te dejan')+' con menos líquido que antes.</b> '+
+      'Pasa solo con el tipo único: al cruzar de tramo, el porcentaje nuevo se aplica a todo el sueldo. '+
+      'Por tramos la curva no tiene esos saltos y nunca pierdes al cobrar más.';
+  }else{
+    nota='Sumas '+eur0(incTotal)+' de bruto en todo el recorrido. Con el tipo único te llegan '+eur0(dU)+
+      ' líquidos ('+(dU/incTotal*100).toFixed(1).replace('.',',')+' % de lo que subes); por tramos serían '+eur0(dP)+
+      ' ('+(dP/incTotal*100).toFixed(1).replace('.',',')+' %).';
+  }
+  $('subidaNota').innerHTML=nota;
+
+  dibujarNeto(bruto,hoy,pasos,Pu,Pp);
+}
+
+
+function dibujarNeto(bruto,hoy,pasos,Pu,Pp){
+  const W=760,H=300,ml=60,mr=14,mt=18,mb=34;
+  const ultimo=pasos.length?pasos[pasos.length-1].b:bruto;
+  const x0=Math.max(0,bruto-3000), x1=ultimo+Math.max(6000,(ultimo-bruto)*0.25);
+  const paso=Math.max(50,Math.round((x1-x0)/400/50)*50);
+  const cu=[],cp=[];
+  for(let v=x0;v<=x1;v+=paso){ cu.push([v,motor(v,Pu).neto]); cp.push([v,motor(v,Pp).neto]); }
+  const ys=cu.concat(cp).map(p=>p[1]);
+  let yMin=Math.min(...ys), yMax=Math.max(...ys);
+  const pad=(yMax-yMin)*0.12||1000; yMin-=pad; yMax+=pad;
+  const X=v=>ml+(v-x0)/(x1-x0)*(W-ml-mr);
+  const Y=v=>mt+(1-(v-yMin)/(yMax-yMin))*(H-mt-mb);
+  const linea=(pts,color)=>'<path d="'+pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+','+Y(p[1]).toFixed(1)).join('')+
+    '" fill="none" stroke="'+color+'" stroke-width="2"/>';
+  let s='';
+  for(let i=0;i<=4;i++){
+    const val=yMin+(yMax-yMin)*i/4;
+    s+=`<line x1="${ml}" y1="${Y(val)}" x2="${W-mr}" y2="${Y(val)}" stroke="#D5DCCF"/>`;
+    s+=`<text x="${ml-8}" y="${Y(val)+4}" text-anchor="end" font-size="11" fill="#6A7970">${Math.round(val/1000)}k</text>`;
+  }
+  const rejilla=(x1-x0)>60000?20000:(x1-x0)>25000?10000:5000;
+  for(let v=Math.ceil(x0/rejilla)*rejilla;v<=x1;v+=rejilla)
+    s+=`<text x="${X(v)}" y="${H-12}" text-anchor="middle" font-size="11" fill="#6A7970">${v/1000}k</text>`;
+  s+=linea(cp,'#1E5148')+linea(cu,'#A31E24');
+  s+=`<circle cx="${X(bruto)}" cy="${Y(hoy.u.neto)}" r="4.5" fill="#17201A"/>`;
+  pasos.forEach((d,i)=>{
+    s+=`<circle cx="${X(d.b)}" cy="${Y(d.u.neto)}" r="4.5" fill="#17201A"/>`;
+    s+=`<text x="${X(d.b)}" y="${Y(d.u.neto)+18}" text-anchor="middle" font-size="11" fill="#17201A">${i+1}</text>`;
+  });
+  $('chartNeto').innerHTML=s;
+}
+
+function dibujar(bruto,desc,disc){
+  const W=760,H=300,ml=52,mr=14,mt=14,mb=34;
+  const x0=15000,x1=Math.max(120000,bruto*1.3),y1=42;
+  const X=v=>ml+(v-x0)/(x1-x0)*(W-ml-mr);
+  const Y=v=>mt+(1-v/y1)*(H-mt-mb);
+  let s='';
+  for(let g=0;g<=40;g+=10){
+    s+=`<line x1="${ml}" y1="${Y(g)}" x2="${W-mr}" y2="${Y(g)}" stroke="#D5DCCF"/>`;
+    s+=`<text x="${ml-8}" y="${Y(g)+4}" text-anchor="end" font-size="11" fill="#6A7970">${g} %</text>`;
+  }
+  for(let v=20000;v<=x1;v+=20000){
+    s+=`<text x="${X(v)}" y="${H-12}" text-anchor="middle" font-size="11" fill="#6A7970">${v/1000}k</text>`;
+  }
+  let pu='',pp='';
+  for(let v=x0;v<=x1;v+=250){
+    const a=X(v);
+    pu+=(pu?'L':'M')+a+','+Y(tipoUnico(v,desc,disc));
+    pp+=(pp?'L':'M')+a+','+Y(v>0?irpfProgresivo(v,desc,disc)/v*100:0);
+  }
+  s+=`<path d="${pu}" fill="none" stroke="#A31E24" stroke-width="2"/>`;
+  s+=`<path d="${pp}" fill="none" stroke="#1E5148" stroke-width="2"/>`;
+  if(bruto>=x0&&bruto<=x1){
+    s+=`<line x1="${X(bruto)}" y1="${mt}" x2="${X(bruto)}" y2="${H-mb}" stroke="#17201A" stroke-width="1" stroke-dasharray="4 3"/>`;
+    s+=`<circle cx="${X(bruto)}" cy="${Y(tipoUnico(bruto,desc,disc))}" r="4" fill="#A31E24"/>`;
+  }
+  document.getElementById('chart').innerHTML=s;
+}
+
+calc();
+</script>
+</body>
+</html>

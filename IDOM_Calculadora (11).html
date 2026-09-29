@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Dietas, Pluses e IRPF · IDOM Bizkaia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,700;9..144,900&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --ink: #0b1426;
+    --ink-soft: #2a3548;
+    --paper: #f4f1ea;
+    --paper-warm: #ebe5d7;
+    --accent: #1f3a93;
+    --accent-deep: #142a6c;
+    --signal: #c9462c;
+    --good: #1d6f42;
+    --muted: #8a8475;
+    --shadow: 0 1px 0 rgba(11,20,38,.05), 0 24px 60px -30px rgba(11,20,38,.25);
+  }
+  *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--paper);
+    background-image:
+      radial-gradient(at 12% 8%, rgba(31,58,147,0.06) 0, transparent 45%),
+      radial-gradient(at 88% 92%, rgba(201,70,44,0.05) 0, transparent 45%);
+    color: var(--ink);
+    font-family: "Inter Tight", system-ui, sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: clamp(20px, 4vw, 60px);
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .35;
+    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .04 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    z-index: 0;
+  }
+  .wrap { max-width: 1320px; margin: 0 auto; position: relative; z-index: 1; }
+
+  /* MASTHEAD */
+  header.masthead {
+    display: grid; grid-template-columns: 1fr auto; align-items: end;
+    gap: 24px; padding-bottom: 28px; border-bottom: 2px solid #1a1a1a;
+    margin-bottom: 32px;
+  }
+  .kicker {
+    font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 500;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-soft);
+    margin-bottom: 14px; display: flex; align-items: center; gap: 14px;
+  }
+  .kicker::before { content: ""; width: 28px; height: 1px; background: var(--ink); }
+  h1 {
+    font-family: "Fraunces", serif; font-weight: 400;
+    font-size: clamp(38px, 6vw, 72px); line-height: 0.95;
+    letter-spacing: -0.025em; font-variation-settings: "opsz" 144;
+  }
+  h1 em { font-style: italic; font-weight: 300; color: var(--accent); }
+  .stamp {
+    font-family: "JetBrains Mono", monospace; font-size: 10px; line-height: 1.5;
+    text-align: right; color: var(--ink-soft); border: 1px solid var(--ink);
+    padding: 10px 14px; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap;
+  }
+  .stamp strong { color: var(--ink); }
+
+  .grid { display: grid; grid-template-columns: 400px 1fr; gap: 48px; }
+  @media (max-width: 1024px) {
+    .grid { grid-template-columns: 1fr; gap: 32px; }
+    header.masthead { grid-template-columns: 1fr; }
+    .stamp { justify-self: start; }
+  }
+
+  /* PANEL */
+  aside.panel {
+    position: sticky; top: 24px; align-self: start;
+    background: var(--paper-warm); border: 1px solid var(--ink);
+    padding: 28px; box-shadow: var(--shadow);
+    max-height: calc(100vh - 48px); overflow-y: auto;
+  }
+  @media (max-width: 1024px) { aside.panel { position: static; max-height: none; }}
+  .panel-title {
+    font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding-bottom: 16px; margin-bottom: 24px;
+    border-bottom: 1px solid var(--ink); display: flex; justify-content: space-between;
+  }
+  .panel-title span:last-child { color: var(--muted); font-weight: 400; }
+
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block; font-family: "JetBrains Mono", monospace; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-soft); margin-bottom: 6px;
+  }
+  .field input, .field select {
+    width: 100%; padding: 10px 12px; background: var(--paper);
+    border: 1px solid var(--ink); border-radius: 0;
+    font-family: "Inter Tight", sans-serif; font-size: 15px; font-weight: 500; color: var(--ink);
+  }
+  .field input:focus, .field select:focus {
+    outline: none; background: #fff; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(31,58,147,0.15);
+  }
+  .field input[type="number"] {
+    font-variant-numeric: tabular-nums; font-family: "JetBrains Mono", monospace; font-size: 14px;
+  }
+  .field .hint { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.35; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  /* TABS / TOGGLES */
+  .tabs, .toggle {
+    display: flex; border: 1px solid var(--ink); background: var(--paper);
+  }
+  .tabs.three { grid-template-columns: repeat(3,1fr); display: grid; }
+  .tabs input, .toggle input { display: none; }
+  .tabs label, .toggle label {
+    flex: 1; text-align: center; padding: 9px 6px; cursor: pointer;
+    font-family: "JetBrains Mono", monospace; font-size: 10.5px;
+    letter-spacing: 0.08em; text-transform: uppercase; margin: 0;
+    color: var(--ink-soft); line-height: 1.3;
+  }
+  .tabs label + label,
+  .tabs input + label { border-left: 1px solid var(--ink); }
+  .toggle label:first-of-type { border-right: 1px solid var(--ink); }
+  .tabs input:checked + label,
+  .toggle input:checked + label { background: var(--ink); color: var(--paper); }
+  .toggle.nuclear input:checked + label[for="nuclear-si"] { background: var(--signal); }
+  .hidden { display: none !important; }
+
+  /* SECTION HEADER */
+  section.block { margin-bottom: 44px; }
+  .block-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    border-bottom: 1px solid var(--ink); padding-bottom: 8px; margin-bottom: 18px;
+  }
+  .block-head h2 {
+    font-family: "Fraunces", serif; font-weight: 400; font-size: 28px; letter-spacing: -0.01em;
+  }
+  .block-head .num {
+    font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.15em;
+  }
+
+  /* HERO */
+  .hero {
+    background: var(--ink); color: var(--paper);
+    padding: 36px 36px 28px; position: relative; overflow: hidden; margin-bottom: 28px;
+  }
+  .hero::after {
+    content: ""; position: absolute; top: 0; right: 0; width: 180px; height: 180px;
+    background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+    opacity: 0.4; pointer-events: none;
+  }
+  .hero-label {
+    font-family: "JetBrains Mono", monospace; font-size: 11px;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(244,241,234,0.6); margin-bottom: 8px;
+  }
+  .hero-amount {
+    font-family: "Fraunces", serif; font-weight: 300;
+    font-size: clamp(48px, 7vw, 80px); line-height: 1; letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums; font-variation-settings: "opsz" 144;
+  }
+  .hero-amount .cents { font-size: 0.45em; color: rgba(244,241,234,0.55); }
+  .hero-amount .euro { font-size: 0.5em; color: var(--accent); margin-right: 0.1em; }
+  .hero-breakdown {
+    display: flex; gap: 32px; margin-top: 22px; padding-top: 18px;
+    border-top: 1px solid rgba(244,241,234,0.15);
+    font-family: "JetBrains Mono", monospace; font-size: 11px; flex-wrap: wrap;
+  }
+  .hero-breakdown div b {
+    display: block; color: rgba(244,241,234,0.55); font-weight: 400;
+    text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;
+  }
+  .hero-breakdown div span { font-size: 16px; color: var(--paper); font-weight: 500; }
+
+  /* ASSUMPTIONS */
+  .assumptions {
+    background: var(--paper-warm); border-left: 4px solid var(--accent);
+    padding: 22px 26px; margin-bottom: 32px;
+    font-family: "JetBrains Mono", monospace; font-size: 11.5px; line-height: 1.7;
+  }
+  .assumptions h3 {
+    font-family: "JetBrains Mono", monospace; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 12px;
+  }
+  .assumptions ul {
+    list-style: none; display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 24px;
+  }
+  .assumptions li::before { content: "→ "; color: var(--accent); }
+  .assumptions b { color: var(--ink); }
+
+  /* TABLA UNIFICADA (Concepto · Bruto · Neto) */
+  table.unified {
+    width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums;
+    background: var(--paper-warm); border: 1px solid var(--ink);
+  }
+  table.unified th {
+    font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.12em; color: var(--paper);
+    background: var(--ink); padding: 12px 14px; text-align: right; border: none;
+  }
+  table.unified th:first-child { text-align: left; }
+  table.unified td {
+    padding: 11px 14px; border-bottom: 1px dotted rgba(11,20,38,0.18); font-size: 14px;
+  }
+  table.unified td:not(:first-child) {
+    font-family: "JetBrains Mono", monospace; font-size: 13px;
+    text-align: right; white-space: nowrap; font-weight: 500;
+  }
+  table.unified tr.partida-bruta td:nth-child(2) { color: var(--ink); }
+  table.unified tr.partida-bruta td:nth-child(3) { color: var(--muted); }
+  table.unified tr.partida-bruta td:nth-child(4) { color: var(--good); font-weight: 600; }
+  table.unified tr.retention td:nth-child(2),
+  table.unified tr.retention td:nth-child(3) { color: var(--signal); }
+  table.unified tr.retention td:nth-child(4) { color: var(--signal); }
+  table.unified tr.exempt td:nth-child(3) { color: var(--good); font-style: italic; font-size: 11px; }
+  table.unified tr.exempt td:nth-child(4) { color: var(--good); font-weight: 600; }
+  table.unified tr.subtotal td {
+    background: rgba(31,58,147,0.06); border-top: 1px solid var(--ink); font-weight: 700;
+  }
+  table.unified tr.total td {
+    background: var(--ink); color: var(--paper);
+    font-weight: 700; text-transform: uppercase; font-size: 13px; letter-spacing: 0.05em;
+  }
+  table.unified tr.total td:last-child {
+    font-size: 17px; color: #98e0b3;
+  }
+  table.unified tr.divider td {
+    background: var(--paper); height: 6px; padding: 0; border: none;
+  }
+  .pill {
+    display: inline-block; padding: 2px 7px; margin-left: 6px;
+    border: 1px solid var(--ink); font-family: "JetBrains Mono", monospace;
+    font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500;
+  }
+  .pill.exempt { color: var(--good); border-color: var(--good); }
+  .pill.brut   { color: var(--signal); border-color: var(--signal); }
+  .pill.no-ss  { color: var(--accent); border-color: var(--accent); }
+  .pill.raise  { color: var(--good); border-color: var(--good); background: rgba(29,111,66,0.08); }
+
+  /* CARDS */
+  .two-up { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  @media (max-width: 760px) { .two-up { grid-template-columns: 1fr; }}
+  .card { background: var(--paper-warm); border: 1px solid var(--ink); padding: 24px; }
+  .card-label {
+    font-family: "JetBrains Mono", monospace; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.15em; color: var(--ink-soft); margin-bottom: 14px;
+  }
+  .card-amount {
+    font-family: "Fraunces", serif; font-weight: 400;
+    font-size: 38px; line-height: 1; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums; color: var(--good); margin-bottom: 4px;
+  }
+  .card-amount .cents { font-size: 0.55em; color: var(--ink-soft); }
+  .card-sub { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); }
+
+  /* ACTION BAR */
+  .action-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px; margin-bottom: 28px; padding: 14px 20px;
+    background: var(--paper-warm); border: 1px solid var(--ink); flex-wrap: wrap;
+  }
+  .action-bar .label {
+    font-family: "JetBrains Mono", monospace; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.15em; color: var(--ink-soft);
+    line-height: 1.4;
+  }
+  .action-bar .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    background: var(--ink); color: var(--paper); border: 1px solid var(--ink);
+    padding: 12px 18px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+  }
+  .btn:hover { background: var(--accent); border-color: var(--accent); }
+  .btn:active { transform: translateY(1px); }
+  .btn svg { width: 13px; height: 13px; }
+  .btn.success { background: var(--good); border-color: var(--good); }
+  .btn.ghost { background: transparent; color: var(--ink); }
+  .btn.ghost:hover { background: var(--ink); color: var(--paper); }
+
+  /* MES-A-MES TABLE */
+  .monthtable-wrap {
+    overflow-x: auto; border: 1px solid var(--ink); background: var(--paper-warm);
+    margin-bottom: 24px;
+  }
+  table.monthtable {
+    width: 100%; border-collapse: collapse;
+    font-variant-numeric: tabular-nums; font-size: 13px;
+  }
+  table.monthtable th {
+    font-family: "JetBrains Mono", monospace; font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    background: var(--ink); color: var(--paper); padding: 10px 8px; white-space: nowrap;
+    position: sticky; top: 0;
+  }
+  table.monthtable td {
+    padding: 6px 8px; border-bottom: 1px solid rgba(11,20,38,0.08);
+    text-align: right; white-space: nowrap;
+  }
+  table.monthtable td:first-child {
+    text-align: center; font-family: "JetBrains Mono", monospace; font-weight: 700;
+    background: rgba(31,58,147,0.06); color: var(--ink);
+  }
+  table.monthtable td.editable input {
+    width: 60px; padding: 4px 6px; border: 1px solid rgba(11,20,38,0.15);
+    background: var(--paper); font-family: "JetBrains Mono", monospace; font-size: 12px;
+    text-align: right;
+  }
+  table.monthtable td.editable input:focus {
+    outline: none; border-color: var(--accent); background: #fff;
+    box-shadow: 0 0 0 2px rgba(31,58,147,0.12);
+  }
+  table.monthtable tr.modified td:first-child {
+    background: var(--signal); color: var(--paper);
+  }
+  table.monthtable tr:hover td:not(:first-child) {
+    background: rgba(31,58,147,0.04);
+  }
+  table.monthtable tfoot td {
+    background: var(--ink); color: var(--paper); font-weight: 700;
+    font-family: "JetBrains Mono", monospace; font-size: 12px;
+    padding: 10px 8px; border: none;
+  }
+  table.monthtable tfoot td:first-child { background: var(--ink); }
+  table.monthtable tr.extra-row td {
+    background: rgba(29,111,66,0.08);
+    border-top: 1px solid var(--good);
+    border-bottom: 1px solid var(--good);
+    font-style: italic;
+  }
+  table.monthtable tr.extra-row td:first-child {
+    background: var(--good); color: var(--paper);
+    text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px;
+  }
+
+  /* notas */
+  footer.notes {
+    margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--ink);
+    font-size: 12px; line-height: 1.7; color: var(--ink-soft);
+    columns: 2; column-gap: 40px;
+  }
+  @media (max-width: 760px) { footer.notes { columns: 1; }}
+  footer.notes p { margin-bottom: 10px; break-inside: avoid; }
+  footer.notes p::before {
+    content: "§"; color: var(--accent); margin-right: 6px; font-weight: 700;
+  }
+  .footer-credit {
+    margin-top: 32px; font-family: "JetBrains Mono", monospace;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--muted); text-align: center; columns: 1;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div>
+    <div class="kicker">Reglamento Ed. 00.02 · Sept 2025 · Bizkaia</div>
+    <h1>Calculadora de <em>dietas, pluses</em><br>e IRPF</h1>
+  </div>
+  <div class="stamp">
+    <strong>IDOM</strong><br>Doc. interno<br>v.3.0 / 2026
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- =========== PANEL =========== -->
+  <aside class="panel">
+    <div class="panel-title">
+      <span>Parámetros</span>
+      <span id="panel-counter">01 / 03</span>
+    </div>
+
+    <!-- ALCANCE -->
+    <div class="field">
+      <label>Alcance del cálculo</label>
+      <div class="tabs three">
+        <input type="radio" name="scope" id="scope-mes" value="mes" checked>
+        <label for="scope-mes">Un mes</label>
+        <input type="radio" name="scope" id="scope-ano" value="ano">
+        <label for="scope-ano">Un año</label>
+        <input type="radio" name="scope" id="scope-estancia" value="estancia">
+        <label for="scope-estancia">Estancia</label>
+      </div>
+    </div>
+
+    <!-- SALARIO -->
+    <div class="field">
+      <label for="salario">Salario base bruto anual (€)</label>
+      <input type="number" id="salario" value="35000" min="0" step="500">
+    </div>
+
+    <!-- EXTRAS -->
+    <div class="field">
+      <label>¿Cobras pagas extras?</label>
+      <div class="toggle">
+        <input type="radio" name="hasExtras" id="extras-no" value="no">
+        <label for="extras-no">No</label>
+        <input type="radio" name="hasExtras" id="extras-si" value="si" checked>
+        <label for="extras-si">Sí</label>
+      </div>
+    </div>
+    <div class="field" id="field-extras">
+      <label for="num-extras">Nº de pagas extras / año</label>
+      <input type="number" id="num-extras" value="2" min="1" max="4">
+    </div>
+
+    <!-- ORIGEN/DESTINO -->
+    <div class="field">
+      <label for="origen">País de origen</label>
+      <select id="origen"></select>
+    </div>
+    <div class="field">
+      <label for="destino">País / ciudad destino</label>
+      <select id="destino"></select>
+    </div>
+
+    <!-- NUCLEAR -->
+    <div class="field">
+      <label>¿Central nuclear? <span style="color:var(--muted);text-transform:none;letter-spacing:0;font-family:'Inter Tight'">— suma +10%</span></label>
+      <div class="toggle nuclear">
+        <input type="radio" name="nuclear" id="nuclear-no" value="no" checked>
+        <label for="nuclear-no">No</label>
+        <input type="radio" name="nuclear" id="nuclear-si" value="si">
+        <label for="nuclear-si">Sí</label>
+      </div>
+    </div>
+
+    <!-- DÍAS (varía por scope) -->
+    <div class="field" id="field-dias-mes">
+      <label for="dias-mes">Días en destino (este mes)</label>
+      <input type="number" id="dias-mes" value="22" min="0" max="31">
+    </div>
+
+    <!-- FECHAS DE ESTANCIA (para año y estancia) -->
+    <div class="field" id="field-fechas">
+      <label>Fechas del desplazamiento</label>
+      <div class="field-row">
+        <div>
+          <input type="date" id="fecha-inicio" value="2026-10-01">
+          <div class="hint" style="margin-top:4px">Inicio</div>
+        </div>
+        <div>
+          <input type="date" id="fecha-fin" value="2027-12-31">
+          <div class="hint" style="margin-top:4px">Fin</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DÍAS/MES POR DEFECTO -->
+    <div class="field" id="field-dias-defecto">
+      <label for="dias-defecto">Días/mes por defecto en destino</label>
+      <input type="number" id="dias-defecto" value="22" min="0" max="31">
+      <div class="hint">Rellena la tabla; editable mes a mes</div>
+    </div>
+
+    <!-- MESES DE PAGAS EXTRAS -->
+    <div class="field" id="field-meses-extras">
+      <label>Meses de las pagas extras</label>
+      <div class="field-row">
+        <div>
+          <input type="number" id="extra-mes-1" value="6" min="1" max="12">
+          <div class="hint" style="margin-top:4px">1ª extra</div>
+        </div>
+        <div>
+          <input type="number" id="extra-mes-2" value="12" min="1" max="12">
+          <div class="hint" style="margin-top:4px">2ª extra</div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:6px">6 = junio · 12 = diciembre. Prorrateadas según meses trabajados desde la anterior.</div>
+    </div>
+
+    <!-- DURACIÓN (derivada de fechas, campo oculto) -->
+    <div class="field hidden" id="field-duracion">
+      <label for="duracion">Duración (meses)</label>
+      <input type="number" id="duracion" value="24" min="1" max="120">
+    </div>
+
+    <!-- SUBIDA SUELDO -->
+    <div class="field" id="field-raise">
+      <label>¿Subida de sueldo prevista?</label>
+      <div class="toggle">
+        <input type="radio" name="hasRaise" id="raise-no" value="no" checked>
+        <label for="raise-no">No</label>
+        <input type="radio" name="hasRaise" id="raise-si" value="si">
+        <label for="raise-si">Sí</label>
+      </div>
+    </div>
+    <div class="field-row" id="raise-inputs">
+      <div class="field" style="margin-bottom:0">
+        <label for="raise-pct">% subida</label>
+        <input type="number" id="raise-pct" value="3" min="0" max="100" step="0.1">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label for="raise-mes">Entra en mes nº</label>
+        <input type="number" id="raise-mes" value="13" min="1" max="120">
+      </div>
+    </div>
+
+    <!-- MES ACTUAL (sólo en alcance Mes con subida) -->
+    <div class="field" id="field-mes-actual">
+      <label for="mes-actual">Mes de la estancia actual</label>
+      <input type="number" id="mes-actual" value="1" min="1" max="120">
+      <div class="hint">Define si este mes lleva la subida o no</div>
+    </div>
+
+    <!-- IRPF -->
+    <div class="field">
+      <label>Régimen IRPF</label>
+      <div class="tabs">
+        <input type="radio" name="irpfMode" id="irpf-zero" value="zero" checked>
+        <label for="irpf-zero">0%</label>
+        <input type="radio" name="irpfMode" id="irpf-dipu" value="dipu">
+        <label for="irpf-dipu">Diputación</label>
+        <input type="radio" name="irpfMode" id="irpf-manual" value="manual">
+        <label for="irpf-manual">Manual</label>
+      </div>
+    </div>
+    <div class="field" id="field-irpf-manual">
+      <label for="irpf-pct-manual">% IRPF manual</label>
+      <input type="number" id="irpf-pct-manual" value="17" min="0" max="60" step="0.1">
+    </div>
+
+    <!-- SS -->
+    <div class="field">
+      <label for="ss">% Seguridad Social trabajador</label>
+      <input type="number" id="ss" value="6.37" min="0" step="0.01">
+    </div>
+
+  </aside>
+
+  <!-- =========== MAIN =========== -->
+  <main>
+
+    <div class="action-bar">
+      <div class="label">Cálculo según parámetros del panel · IRPF 0% por defecto, activar "Diputación" o "Manual" para ver retenciones</div>
+      <div class="actions">
+        <button class="btn ghost" id="btn-load" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M12 21V8M6 14l6-6 6 6M4 3h16"/></svg>
+          Cargar JSON
+        </button>
+        <input type="file" id="file-input" accept=".json" style="display:none">
+        <button class="btn ghost" id="btn-save" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2zM17 21v-8H7v8M7 3v5h8"/></svg>
+          Guardar JSON
+        </button>
+        <button class="btn" id="btn-export" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><path d="M12 3v13M6 11l6 6 6-6M4 21h16"/></svg>
+          Exportar Excel
+        </button>
+      </div>
+    </div>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-label" id="hero-label">Neto del mes</div>
+      <div class="hero-amount">
+        <span class="euro">€</span><span id="hero-int">2.816</span><span class="cents">,<span id="hero-cents">44</span></span>
+      </div>
+      <div class="hero-breakdown">
+        <div><b id="hb1-l">Bruto</b><span id="hb1-v">3.718,44 €</span></div>
+        <div><b id="hb2-l">− IRPF</b><span id="hb2-v">0,00 €</span></div>
+        <div><b id="hb3-l">− SS</b><span id="hb3-v">179,41 €</span></div>
+        <div><b id="hb4-l">Tipo IRPF</b><span id="hb4-v">0,0 %</span></div>
+      </div>
+    </div>
+
+    <!-- ASSUMPTIONS -->
+    <div class="assumptions">
+      <h3>Configuración</h3>
+      <ul id="a-list">
+        <li>Ruta: <b id="a-ruta">España → Francia</b></li>
+        <li>Dieta diaria: <b id="a-dieta">41 €</b></li>
+        <li>% plus: <b id="a-plus">15,0 %</b></li>
+        <li>Régimen IRPF: <b id="a-irpf">0%</b></li>
+        <li id="a-extras-li">Pagas extras: <b id="a-extras">2 / año</b></li>
+        <li id="a-dur-li">Duración: <b id="a-dur">—</b></li>
+      </ul>
+    </div>
+
+    <!-- ============= VISTA: UN MES ============= -->
+    <div id="view-mes">
+      <section class="block">
+        <div class="block-head">
+          <h2>Mensualidad — desglose</h2>
+          <span class="num">— 03</span>
+        </div>
+        <table class="unified" id="tbl-mes-unified">
+          <thead>
+            <tr>
+              <th>Concepto</th>
+              <th>Bruto</th>
+              <th>Retención</th>
+              <th>Neto</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </div>
+
+    <!-- ============= VISTA: UN AÑO ============= -->
+    <div id="view-ano" class="hidden">
+      <section class="block">
+        <div class="block-head">
+          <h2>Año completo — desglose</h2>
+          <span class="num">— 03</span>
+        </div>
+        <table class="unified" id="tbl-ano-unified">
+          <thead>
+            <tr>
+              <th>Concepto</th>
+              <th>Bruto</th>
+              <th>Retención</th>
+              <th>Neto</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </div>
+
+    <!-- ============= VISTA: ESTANCIA ============= -->
+    <div id="view-estancia" class="hidden">
+      <section class="block">
+        <div class="block-head">
+          <h2>Estancia completa — mes a mes</h2>
+          <span class="num">— 03</span>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+          <button class="btn ghost" id="btn-reset-meses" type="button" style="font-size:10px;padding:8px 14px">
+            ↻ Resetear personalizaciones
+          </button>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase">
+            Edita celdas para personalizar meses individuales
+          </span>
+        </div>
+        <div class="monthtable-wrap">
+          <table class="monthtable" id="tbl-meses">
+            <thead>
+              <tr>
+                <th>Mes</th>
+                <th>Días destino</th>
+                <th>Salario base</th>
+                <th>Plus</th>
+                <th>Dieta</th>
+                <th>Bruto</th>
+                <th>IRPF</th>
+                <th>SS</th>
+                <th>Neto</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+              <tr id="meses-totals"></tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <h2>Resumen de la estancia</h2>
+          <span class="num">— 04</span>
+        </div>
+        <table class="unified" id="tbl-estancia-unified">
+          <thead>
+            <tr>
+              <th>Concepto</th>
+              <th>Bruto</th>
+              <th>Retención</th>
+              <th>Neto</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <div class="two-up" style="margin-top:28px">
+          <div class="card">
+            <div class="card-label">Neto medio mensual</div>
+            <div class="card-amount" id="card-medio">—</div>
+            <div class="card-sub" id="card-medio-sub">—</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Neto total estancia</div>
+            <div class="card-amount" id="card-total">—</div>
+            <div class="card-sub" id="card-total-sub">—</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="notes">
+      <p><b>Dietas de manutención:</b> netas y exentas de IRPF y SS dentro de los límites del art. 13 NF 13/2013 Bizkaia.</p>
+      <p><b>Dieta de alojamiento:</b> la asume IDOM directamente y no figura en este cálculo.</p>
+      <p><b>Pagas extras:</b> solo contienen salario base (sin plus ni dietas). Tributan IRPF pero no cotizan a SS en el mes de cobro (la cotización se prorratea en los 12 meses ordinarios).</p>
+      <p><b>Mensualidad + 1/12 extra:</b> es el equivalente a una nómina con pagas extras prorrateadas mensualmente.</p>
+      <p><b>IRPF Bizkaia (Diputación):</b> Decreto Foral 134/2025 (BOB 30/12/2025). El % se selecciona según base anual proyectada.</p>
+      <p><b>Modo estancia:</b> arranca homogéneo (todos los meses iguales) y permite editar celdas individualmente. Los meses modificados quedan marcados en rojo.</p>
+      <p><b>Persistencia:</b> usa "Guardar JSON" para descargar todo el estado y "Cargar JSON" para restaurarlo en otra sesión.</p>
+      <p>Cálculo orientativo. La retención real depende de circunstancias personales no recogidas aquí.</p>
+    </footer>
+    <div class="footer-credit">— fin del documento —</div>
+
+  </main>
+</div>
+</div>
+
+<script>
+"use strict";
+
+// =============== DATOS PAÍSES ===============
+const PAISES = [
+  ["Argelia",29,0.35],["Egipto",32,0.25],
+  ["Angola",47,0.35],["Etiopía",30,0.35],["Sudáfrica",30,0.20],["Tanzania",36,0.35],
+  ["Canadá",44,0.15],["Estados Unidos",49,0.15],
+  ["Estados Unidos - Atlanta",56,0.15],["Estados Unidos - Minneapolis",51,0.15],
+  ["México",34,0.25],
+  ["Costa Rica",39,0.20],["República Dominicana",36,0.25],["Guatemala",40,0.25],
+  ["Honduras",33,0.45],["Nicaragua",30,0.35],["Panamá",38,0.20],
+  ["Argentina",41,0.20],["Bolivia",33,0.35],["Brasil",32,0.25],
+  ["Brasil - Sao Paulo",37,0.25],["Brasil - Rio de Janeiro",35,0.25],
+  ["Chile",37,0.15],["Colombia",27,0.25],["Ecuador",40,0.25],
+  ["Perú",34,0.25],["Uruguay",44,0.15],
+  ["Arabia Saudita",50,0.25],["Bahréin",42,0.20],
+  ["Emiratos Árabes Unidos",48,0.15],["Israel",58,0.20],
+  ["Jordania",42,0.20],["Kuwait",39,0.20],["Omán",40,0.20],["Qatar",40,0.15],
+  ["China",49,0.30],["Corea del Sur",47,0.15],["Hong Kong",55,0.15],
+  ["Japón",43,0.15],["Japón - Tokio",44,0.15],["Macao",49,0.15],
+  ["Mongolia",36,0.35],["Taiwán",42,0.15],
+  ["Bangladesh",38,0.35],["India",31,0.35],["Irán",89,0.25],
+  ["Filipinas",37,0.25],["Laos",31,0.30],["Malasia",32,0.20],["Vietnam",36,0.30],
+  ["Kazajistán",26,0.35],
+  ["Alemania",44,0.15],["Bélgica",45,0.15],["Dinamarca",54,0.15],
+  ["Eslovaquia",40,0.20],["Eslovenia",38,0.20],["España",36,0.15],
+  ["Francia",41,0.15],["Francia - París",43,0.15],["Grecia",39,0.15],
+  ["Holanda",46,0.15],["Irlanda",42,0.15],["Italia",42,0.15],
+  ["Lituania",38,0.20],["Luxemburgo",43,0.15],["Polonia",32,0.15],
+  ["Portugal",39,0.15],["Reino Unido",42,0.15],["Reino Unido - Londres",44,0.15],
+  ["Suecia",44,0.15],
+  ["Federación Rusa",36,0.25],["Federación Rusa - Moscú",36,0.25],
+  ["Macedonia",29,0.20],["Turquía",23,0.20],
+  ["Australia",40,0.15],["Nueva Zelanda",39,0.15],
+];
+
+// =============== TABLA IRPF BIZKAIA 2026 ===============
+// Solo columna 0 descendientes (decretal foral 134/2025)
+const IRPF_BIZKAIA = [
+  [20000.00,0], [20510.00,7], [21300.00,8], [22150.00,9], [23220.00,10],
+  [24050.00,11], [25410.00,12], [27440.00,13], [29790.00,14], [32610.00,15],
+  [36350.00,16], [40670.00,17], [44560.00,18], [48060.00,19], [52020.00,20],
+  [56780.00,21], [61820.00,22], [65710.00,23], [70080.00,24], [75020.00,25],
+  [80730.00,26], [86770.00,27], [92190.00,28], [98350.00,29], [105380.00,30],
+  [113180.00,31], [122030.00,32], [132200.00,33], [144140.00,34], [157300.00,35],
+  [172280.00,36], [190410.00,37], [212820.00,38], [236060.00,39], [Infinity,40],
+];
+function getIRPFDiputacion(base) {
+  for (const [hasta, pct] of IRPF_BIZKAIA) {
+    if (base <= hasta) return pct / 100;
+  }
+  return 0.40;
+}
+
+// =============== HELPERS ===============
+const $ = id => document.getElementById(id);
+const fmtEUR = new Intl.NumberFormat('es-ES', { style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2 });
+const fmtPCT = n => (n*100).toLocaleString('es-ES', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' %';
+const fmtEURround = n => Math.round(n).toLocaleString('es-ES') + ' €';
+const fmtInt = n => Math.floor(n).toLocaleString('es-ES');
+const fmtCents = n => String(Math.round((n - Math.floor(n)) * 100)).padStart(2, '0');
+const dash = "—";
+
+// =============== ESTADO GLOBAL ===============
+const STATE = {
+  scope: "mes",
+  // personalizaciones por mes en modo estancia (objeto { [mesNum]: {dias, salario, ...} })
+  monthOverrides: {},
+  // últimos resultados (para export)
+  lastResult: null,
+};
+
+// =============== POBLAR SELECTS ===============
+function populateSelects() {
+  const ordered = [...PAISES].sort((a,b) => a[0].localeCompare(b[0], 'es'));
+  const opts = ordered.map(p => `<option value="${p[0]}">${p[0]}</option>`).join("");
+  $("origen").innerHTML  = opts;
+  $("destino").innerHTML = opts;
+  $("origen").value  = "España";
+  $("destino").value = "Francia";
+}
+
+// =============== LEER INPUTS ===============
+function readInputs() {
+  const scope = document.querySelector('input[name="scope"]:checked').value;
+  const salario = parseFloat($("salario").value) || 0;
+  const hasExtras = document.querySelector('input[name="hasExtras"]:checked').value === "si";
+  const nExtras = hasExtras ? (parseInt($("num-extras").value) || 0) : 0;
+  const pagas = 12 + nExtras;
+  const origen = $("origen").value;
+  const destino = $("destino").value;
+  const nuclear = document.querySelector('input[name="nuclear"]:checked').value === "si";
+
+  const diasMes = parseFloat($("dias-mes").value) || 0;
+  const diasDefecto = parseFloat($("dias-defecto").value) || 0;
+  const fechaInicio = $("fecha-inicio").value;
+  const fechaFin = $("fecha-fin").value;
+  const extraMes1 = parseInt($("extra-mes-1").value) || 6;
+  const extraMes2 = parseInt($("extra-mes-2").value) || 12;
+  // Duración derivada de fechas si están completas
+  let duracion = Math.max(1, parseInt($("duracion").value) || 1);
+  let calendario = [];  // lista de {year, month (1-12), esExtra1, esExtra2}
+  if (fechaInicio && fechaFin) {
+    const d0 = new Date(fechaInicio);
+    const d1 = new Date(fechaFin);
+    if (!isNaN(d0) && !isNaN(d1) && d0 <= d1) {
+      // Iteramos por mes desde d0 hasta d1 (inclusive)
+      let y = d0.getFullYear(), m = d0.getMonth() + 1;
+      const yEnd = d1.getFullYear(), mEnd = d1.getMonth() + 1;
+      while (y < yEnd || (y === yEnd && m <= mEnd)) {
+        calendario.push({ year: y, month: m });
+        m++;
+        if (m > 12) { m = 1; y++; }
+      }
+      duracion = calendario.length;
+    }
+  }
+
+  const hasRaise = document.querySelector('input[name="hasRaise"]:checked').value === "si";
+  const raisePct = hasRaise ? (parseFloat($("raise-pct").value) || 0) / 100 : 0;
+  const raiseMes = hasRaise ? Math.max(1, parseInt($("raise-mes").value) || 1) : Infinity;
+  const mesActual = parseInt($("mes-actual").value) || 1;
+
+  const irpfMode = document.querySelector('input[name="irpfMode"]:checked').value;
+  const irpfPctManual = (parseFloat($("irpf-pct-manual").value) || 0) / 100;
+
+  const ss = (parseFloat($("ss").value) || 0) / 100;
+
+  // País data
+  const origenRow  = PAISES.find(p => p[0] === origen)  || ["",0,0.15];
+  const destinoRow = PAISES.find(p => p[0] === destino) || ["",0,0.15];
+  const pctOrig = origenRow[2];
+  const pctDest = destinoRow[2];
+  const dietaDia = destinoRow[1];
+  const pctBase = (pctDest <= pctOrig) ? 0.15 : (0.15 + (pctDest - pctOrig));
+  const pctNuc = nuclear ? 0.10 : 0;
+  const pctTotal = pctBase + pctNuc;
+
+  return {
+    scope, salario, hasExtras, nExtras, pagas, origen, destino, nuclear,
+    diasMes, diasDefecto, fechaInicio, fechaFin, extraMes1, extraMes2,
+    calendario, duracion,
+    hasRaise, raisePct, raiseMes, mesActual,
+    irpfMode, irpfPctManual, ss,
+    dietaDia, pctOrig, pctDest, pctBase, pctNuc, pctTotal,
+  };
+}
+
+function getIRPFForBase(baseAnual, mode, manual) {
+  if (mode === "zero") return 0;
+  if (mode === "manual") return manual;
+  return getIRPFDiputacion(baseAnual);
+}
+
+// =============== TOGGLES UI ===============
+function applyVisibility() {
+  const I = readInputs();
+
+  // Extras
+  $("field-extras").classList.toggle("hidden", !I.hasExtras);
+
+  // Por scope
+  $("view-mes").classList.toggle("hidden", I.scope !== "mes");
+  $("view-ano").classList.toggle("hidden", I.scope !== "ano");
+  $("view-estancia").classList.toggle("hidden", I.scope !== "estancia");
+
+  // Días: en "mes" mostramos días de este mes; en "año"/"estancia" fechas + días defecto + meses extras
+  $("field-dias-mes").classList.toggle("hidden", I.scope !== "mes");
+  $("field-fechas").classList.toggle("hidden", I.scope === "mes");
+  $("field-dias-defecto").classList.toggle("hidden", I.scope === "mes");
+  $("field-meses-extras").classList.toggle("hidden", I.scope === "mes" || !I.hasExtras);
+
+  // Duración solo en estancia
+  $("field-duracion").classList.toggle("hidden", I.scope !== "estancia");
+
+  // Subida: solo en año y estancia
+  $("field-raise").classList.toggle("hidden", I.scope === "mes");
+  $("raise-inputs").classList.toggle("hidden", I.scope === "mes" || !I.hasRaise);
+
+  // Mes actual: solo en alcance mes si hay subida (necesitamos saber qué mes es)
+  $("field-mes-actual").classList.toggle("hidden", I.scope !== "mes" || !I.hasRaise);
+  // Pero raise toggle no se muestra en mes, así que hasRaise siempre false en mes…
+  // Hacemos que el campo "mes actual" se muestre solo si hay subida activada
+  // y el scope no es mes → no aplica; en scope=mes el toggle no se ve, así que mejor:
+  // mostrar mes-actual sólo cuando scope=mes Y queramos manejarlo manualmente. Lo ocultamos.
+  $("field-mes-actual").classList.add("hidden");
+
+  // IRPF manual: solo si modo manual
+  $("field-irpf-manual").classList.toggle("hidden", I.irpfMode !== "manual");
+
+  // Contador del panel
+  const counters = { mes: "01 / 03", ano: "02 / 03", estancia: "03 / 03" };
+  $("panel-counter").textContent = counters[I.scope];
+}
+
+// =============== CÁLCULO DE UN BLOQUE MENSUAL ===============
+/**
+ * Calcula un mes "tipo" (mensualidad + paga extra prorrateada + paga extra sola)
+ * dados los inputs ya resueltos.
+ *
+ * @param salario - salario anual aplicable a este mes (puede llevar subida)
+ * @param pagas - total pagas/año (12 + nExtras)
+ * @param nExtras - número de pagas extras
+ * @param pctTotal - % plus aplicable
+ * @param dietaDia - dieta diaria neta destino
+ * @param dias - días en destino este mes
+ * @param ss - % SS trabajador
+ * @param irpfMode - "zero" | "dipu" | "manual"
+ * @param irpfManual - % manual (si mode = manual)
+ */
+function calcMes(salario, pagas, nExtras, pctTotal, dietaDia, dias, ss, irpfMode, irpfManual) {
+  // Base IRPF proyectada (este mes × 12) para encontrar tramo
+  const salMes = salario / pagas;
+  const plusMes  = (salario / 365) * pctTotal * dias;
+  const dietaMes = dietaDia * dias;
+  const plusAnualProy = plusMes * 12;
+  const baseAnualProy = salario + plusAnualProy;
+  const irpfApli = getIRPFForBase(baseAnualProy, irpfMode, irpfManual);
+
+  // === MENSUALIDAD PURA ===
+  const bruto_pura = salMes + plusMes + dietaMes;
+  const baseIRPF_pura = salMes + plusMes;
+  const baseSS = (salario + plusAnualProy) / 12;
+  const irpf_pura = baseIRPF_pura * irpfApli;
+  const ss_pura = baseSS * ss;
+  const neto_pura = bruto_pura - irpf_pura - ss_pura;
+
+  // === MENSUALIDAD + 1/12 EXTRA ===
+  const extraProrr = (salMes * nExtras) / 12;
+  const bruto_prorr = salMes + extraProrr + plusMes + dietaMes;
+  const baseIRPF_prorr = salMes + extraProrr + plusMes;
+  const irpf_prorr = baseIRPF_prorr * irpfApli;
+  const ss_prorr = baseSS * ss;
+  const neto_prorr = bruto_prorr - irpf_prorr - ss_prorr;
+
+  // === PAGA EXTRA SOLA ===
+  // Solo salario, IRPF sí, SS no cotiza (ya prorrateada anualmente)
+  const bruto_extra = salMes;
+  const irpf_extra = bruto_extra * irpfApli;
+  const ss_extra = 0;
+  const neto_extra = bruto_extra - irpf_extra;
+
+  return {
+    salMes, plusMes, dietaMes, extraProrr,
+    baseAnualProy, baseIRPF_pura, baseIRPF_prorr, baseSS, irpfApli,
+    bruto_pura, irpf_pura, ss_pura, neto_pura,
+    bruto_prorr, irpf_prorr, ss_prorr, neto_prorr,
+    bruto_extra, irpf_extra, ss_extra, neto_extra,
+  };
+}
+
+// =============== RENDER TABLA UNIFICADA (mes + año) ===============
+/**
+ * Construye una tabla unificada con columnas: Concepto · Bruto · Retención · Neto
+ * Las "retenciones" sólo aparecen donde aplican (no en dieta exenta).
+ */
+function renderUnifiedTable(tbodyEl, rows) {
+  let html = "";
+  for (const r of rows) {
+    if (r.type === "divider") {
+      html += `<tr class="divider"><td colspan="4"></td></tr>`;
+    } else if (r.type === "header") {
+      html += `<tr class="subtotal"><td colspan="4" style="text-transform:uppercase;letter-spacing:0.08em;font-size:11px;font-family:'JetBrains Mono',monospace">${r.label}</td></tr>`;
+    } else if (r.type === "total") {
+      html += `<tr class="total"><td>${r.label}</td><td>${fmtEUR.format(r.bruto || 0)}</td><td>${r.ret==null?dash:'− '+fmtEUR.format(r.ret)}</td><td>${fmtEUR.format(r.neto)}</td></tr>`;
+    } else if (r.type === "exempt") {
+      html += `<tr class="exempt"><td>${r.label}</td><td>${fmtEUR.format(r.bruto)}</td><td>exenta</td><td>${fmtEUR.format(r.bruto)}</td></tr>`;
+    } else if (r.type === "retention") {
+      html += `<tr class="retention"><td>${r.label}</td><td>${dash}</td><td>${fmtEUR.format(r.ret)}</td><td>${dash}</td></tr>`;
+    } else if (r.type === "no-ss") {
+      html += `<tr class="retention"><td>${r.label}</td><td>${dash}</td><td>no cotiza</td><td>${dash}</td></tr>`;
+    } else {
+      // partida bruta normal: bruto, sin retención individual (la retención se suma globalmente)
+      html += `<tr class="partida-bruta"><td>${r.label}</td><td>${fmtEUR.format(r.bruto || 0)}</td><td>${dash}</td><td>${fmtEUR.format(r.bruto || 0)}</td></tr>`;
+    }
+  }
+  tbodyEl.innerHTML = html;
+}
+
+// =============== RENDER: MODO UN MES ===============
+function renderMes(I) {
+  const c = calcMes(I.salario, I.pagas, I.nExtras, I.pctTotal, I.dietaDia, I.diasMes,
+                    I.ss, I.irpfMode, I.irpfPctManual);
+
+  // Hero: neto pura
+  $("hero-label").textContent = "Neto del mes (mensualidad pura)";
+  $("hero-int").textContent   = fmtInt(c.neto_pura);
+  $("hero-cents").textContent = fmtCents(c.neto_pura);
+  $("hb1-l").textContent = "Bruto";          $("hb1-v").textContent = fmtEUR.format(c.bruto_pura);
+  $("hb2-l").textContent = "− IRPF";         $("hb2-v").textContent = fmtEUR.format(c.irpf_pura);
+  $("hb3-l").textContent = "− SS";           $("hb3-v").textContent = fmtEUR.format(c.ss_pura);
+  $("hb4-l").textContent = "Tipo IRPF";      $("hb4-v").textContent = fmtPCT(c.irpfApli);
+
+  // Tabla unificada con TRES escenarios
+  const rows = [
+    { type: "header", label: "A · Mensualidad pura (sin extras prorrateadas)" },
+    { type: "row",    label: `Salario base mensual <span class="pill brut">bruto</span>`,                bruto: c.salMes },
+    { type: "row",    label: `Plus desplazamiento <span class="pill brut">bruto</span> · ${fmtPCT(I.pctTotal)} × ${I.diasMes} d`, bruto: c.plusMes },
+    { type: "exempt", label: `Dieta manutención <span class="pill exempt">exenta</span> · ${fmtEUR.format(I.dietaDia)} × ${I.diasMes} d`, bruto: c.dietaMes },
+    { type: "retention", label: `Retención IRPF (${fmtPCT(c.irpfApli)})`, ret: c.irpf_pura },
+    { type: "retention", label: `Seguridad Social trabajador (${fmtPCT(I.ss)})`, ret: c.ss_pura },
+    { type: "total",  label: "Total A", bruto: c.bruto_pura, ret: c.irpf_pura + c.ss_pura, neto: c.neto_pura },
+  ];
+
+  if (I.nExtras > 0) {
+    rows.push({ type: "divider" });
+    rows.push({ type: "header", label: "B · Mensualidad + 1/12 paga extra (prorrateada)" });
+    rows.push({ type: "row", label: `Salario base mensual <span class="pill brut">bruto</span>`, bruto: c.salMes });
+    rows.push({ type: "row", label: `+ 1/12 paga extra <span class="pill brut">bruto</span> · ${I.nExtras} extras ÷ 12`, bruto: c.extraProrr });
+    rows.push({ type: "row", label: `Plus desplazamiento <span class="pill brut">bruto</span>`, bruto: c.plusMes });
+    rows.push({ type: "exempt", label: `Dieta manutención <span class="pill exempt">exenta</span>`, bruto: c.dietaMes });
+    rows.push({ type: "retention", label: `Retención IRPF (${fmtPCT(c.irpfApli)})`, ret: c.irpf_prorr });
+    rows.push({ type: "retention", label: `Seguridad Social trabajador (${fmtPCT(I.ss)})`, ret: c.ss_prorr });
+    rows.push({ type: "total", label: "Total B", bruto: c.bruto_prorr, ret: c.irpf_prorr + c.ss_prorr, neto: c.neto_prorr });
+
+    rows.push({ type: "divider" });
+    rows.push({ type: "header", label: "C · Paga extra (cuando se cobra, sola)" });
+    rows.push({ type: "row", label: `Salario base de la extra <span class="pill brut">bruto</span>`, bruto: c.bruto_extra });
+    rows.push({ type: "row", label: `Plus desplazamiento`, bruto: 0 });
+    rows.push({ type: "row", label: `Dieta manutención`, bruto: 0 });
+    rows.push({ type: "retention", label: `Retención IRPF (${fmtPCT(c.irpfApli)})`, ret: c.irpf_extra });
+    rows.push({ type: "no-ss",     label: `Seguridad Social trabajador <span class="pill no-ss">no cotiza</span>` });
+    rows.push({ type: "total", label: "Total C", bruto: c.bruto_extra, ret: c.irpf_extra, neto: c.neto_extra });
+  }
+
+  renderUnifiedTable($("tbl-mes-unified").querySelector("tbody"), rows);
+
+  // Assumptions
+  $("a-ruta").textContent  = `${I.origen} → ${I.destino}` + (I.nuclear ? " (nuclear)" : "");
+  $("a-dieta").textContent = fmtEUR.format(I.dietaDia);
+  $("a-plus").textContent  = fmtPCT(I.pctTotal);
+  $("a-irpf").textContent  = I.irpfMode === "zero" ? "0% (sin retención)"
+                           : I.irpfMode === "manual" ? `Manual ${fmtPCT(I.irpfPctManual)}`
+                           : `Diputación Bizkaia · ${fmtPCT(c.irpfApli)}`;
+  $("a-extras").textContent = I.nExtras > 0 ? `${I.nExtras} / año` : "no";
+  $("a-dur-li").classList.add("hidden");
+
+  STATE.lastResult = { scope: "mes", inputs: I, calc: c };
+}
+
+// =============== CALENDARIO: Mes-a-mes con extras prorrateadas ===============
+/**
+ * Construye la lista de meses del calendario con sus datos calculados,
+ * incluyendo las pagas extras prorrateadas según meses trabajados
+ * desde la última extra (o desde el inicio).
+ */
+function construirCalendario(I) {
+  if (!I.calendario || I.calendario.length === 0) return [];
+
+  const items = [];
+  // Meses trabajados acumulados desde la última extra devengada
+  let mesesAcumDesdeExtra = 0;
+  // El "periodo de devengo" empieza el mes siguiente a la última extra
+  // (o desde el inicio si es la primera vez)
+  const extrasMeses = [];
+  if (I.hasExtras) {
+    if (I.extraMes1 >= 1 && I.extraMes1 <= 12) extrasMeses.push(I.extraMes1);
+    if (I.nExtras >= 2 && I.extraMes2 >= 1 && I.extraMes2 <= 12 && I.extraMes2 !== I.extraMes1) extrasMeses.push(I.extraMes2);
+  }
+
+  for (let idx = 0; idx < I.calendario.length; idx++) {
+    const cal = I.calendario[idx];
+    const monthNum = idx + 1; // mes ordinal desde el inicio de la estancia (1..N)
+
+    // Overrides
+    const o = STATE.monthOverrides[monthNum] || {};
+
+    // Salario aplicable: si hay subida y estamos en/después de raiseMes
+    let salarioDefault = I.salario;
+    if (I.hasRaise && monthNum >= I.raiseMes) salarioDefault = I.salario * (1 + I.raisePct);
+
+    const dias = o.dias != null ? o.dias : I.diasDefecto;
+    const salario = o.salario != null ? o.salario : salarioDefault;
+
+    // Cálculo del mes
+    const c = calcMes(salario, I.pagas, I.nExtras, I.pctTotal, I.dietaDia, dias,
+                      I.ss, I.irpfMode, I.irpfPctManual);
+
+    // Meses acumulados desde última extra (incluyendo éste)
+    mesesAcumDesdeExtra += 1;
+
+    // ¿Este mes toca cobrar una extra? Vemos si es uno de los meses configurados
+    let extraCobrada = null;
+    if (extrasMeses.includes(cal.month) && I.hasExtras) {
+      // Meses "trabajados" para el devengo:
+      // el trabajador cobra 1/6 de la extra por cada mes desde la anterior extra
+      // (semestre completo = extra íntegra; si es el 1er semestre desde inicio, prorrateada)
+      // Asumimos convenio estándar de devengo semestral (6 meses por extra)
+      const mesesDevengo = Math.min(mesesAcumDesdeExtra, 6);
+      const fraccion = mesesDevengo / 6;
+      const bruto = c.bruto_extra * fraccion;
+      const irpf  = c.irpf_extra * fraccion;
+      const neto  = c.neto_extra * fraccion;
+      extraCobrada = { bruto, irpf, neto, mesesDevengo, fraccion };
+      mesesAcumDesdeExtra = 0; // reiniciar contador
+    }
+
+    items.push({
+      mesNum: monthNum,
+      year: cal.year,
+      month: cal.month,
+      label: MONTH_NAMES[cal.month - 1] + " " + cal.year,
+      dias, salario,
+      isModified: Object.keys(o).length > 0,
+      defaultSalario: salarioDefault,
+      defaultDias: I.diasDefecto,
+      calc: c,
+      extra: extraCobrada,
+    });
+  }
+  return items;
+}
+
+const MONTH_NAMES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+
+// =============== ORQUESTA renderAno / renderEstancia ===============
+// (misma función, se llama al mismo dataset)
+function renderCalendario(I, scopeLabel) {
+  // === Construir calendario completo con extras prorrateadas ===
+  const items = construirCalendario(I);
+
+  if (items.length === 0) {
+    // Fechas inválidas: mostrar mensaje
+    if (I.scope === "ano") {
+      $("tbl-ano-unified").querySelector("tbody").innerHTML =
+        `<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--muted);font-style:italic">Introduce fechas de inicio y fin válidas</td></tr>`;
+    } else {
+      $("tbl-meses").querySelector("tbody").innerHTML = "";
+      $("meses-totals").innerHTML = "";
+      $("tbl-estancia-unified").querySelector("tbody").innerHTML =
+        `<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--muted);font-style:italic">Introduce fechas de inicio y fin válidas</td></tr>`;
+    }
+    return;
+  }
+
+  // === Acumular totales ===
+  let accSal = 0, accPlus = 0, accDieta = 0;
+  let accBruto = 0, accIRPF = 0, accSS = 0, accNeto = 0;
+  let accExtraBruto = 0, accExtraIRPF = 0, accExtraNeto = 0;
+  let nExtrasCobradas = 0;
+
+  for (const it of items) {
+    const c = it.calc;
+    accSal   += c.salMes;
+    accPlus  += c.plusMes;
+    accDieta += c.dietaMes;
+    accBruto += c.bruto_pura;
+    accIRPF  += c.irpf_pura;
+    accSS    += c.ss_pura;
+    accNeto  += c.neto_pura;
+    if (it.extra) {
+      accExtraBruto += it.extra.bruto;
+      accExtraIRPF  += it.extra.irpf;
+      accExtraNeto  += it.extra.neto;
+      nExtrasCobradas += 1;
+    }
+  }
+
+  const brutoTotal = accBruto + accExtraBruto;
+  const irpfTotal  = accIRPF + accExtraIRPF;
+  const ssTotal    = accSS;
+  const netoTotal  = brutoTotal - irpfTotal - ssTotal;
+  const duracion   = items.length;
+  const netoMedio  = netoTotal / duracion;
+
+  // === HERO ===
+  const scopeLbl = I.scope === "ano" ? "año" : "estancia";
+  $("hero-label").textContent = `Neto medio mensual de la ${scopeLbl}`;
+  $("hero-int").textContent   = fmtInt(netoMedio);
+  $("hero-cents").textContent = fmtCents(netoMedio);
+  $("hb1-l").textContent = `Bruto ${scopeLbl}`;  $("hb1-v").textContent = fmtEUR.format(brutoTotal);
+  $("hb2-l").textContent = "− IRPF total";       $("hb2-v").textContent = fmtEUR.format(irpfTotal);
+  $("hb3-l").textContent = "− SS total";         $("hb3-v").textContent = fmtEUR.format(ssTotal);
+  $("hb4-l").textContent = "Meses";              $("hb4-v").textContent = `${duracion}`;
+
+  // === Assumptions ===
+  $("a-ruta").textContent  = `${I.origen} → ${I.destino}` + (I.nuclear ? " (nuclear)" : "") + (I.hasRaise ? ` · subida +${(I.raisePct*100).toFixed(1)}% mes ${I.raiseMes}` : "");
+  $("a-dieta").textContent = fmtEUR.format(I.dietaDia);
+  $("a-plus").textContent  = fmtPCT(I.pctTotal);
+  $("a-irpf").textContent  = I.irpfMode === "zero" ? "0%" : I.irpfMode === "manual" ? `Manual ${fmtPCT(I.irpfPctManual)}` : `Diputación Bizkaia`;
+  $("a-extras").textContent = I.hasExtras ? `${I.nExtras} / año · ${nExtrasCobradas} cobradas` : "no";
+  $("a-dur").textContent = `${duracion} meses · ${items[0].label} → ${items[items.length-1].label}`;
+  $("a-dur-li").classList.remove("hidden");
+
+  // === Modo ANO: tabla unificada resumen ===
+  if (I.scope === "ano") {
+    // Renderizamos también una tabla mes-a-mes en el bloque del año
+    // Como no hay un contenedor específico, mostramos el resumen unificado
+    // más el detalle mes a mes en una tabla similar
+    let calHtml = `
+      <div class="monthtable-wrap" style="margin-bottom:24px">
+        <table class="monthtable">
+          <thead>
+            <tr>
+              <th>Mes</th><th>Días</th><th>Salario</th><th>Plus</th><th>Dieta</th>
+              <th>Bruto</th><th>IRPF</th><th>SS</th><th>Neto mes</th>
+              <th>Extra bruta</th><th>Extra neta</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    for (const it of items) {
+      const c = it.calc;
+      calHtml += `
+        <tr>
+          <td>${it.label}</td>
+          <td>${it.dias}</td>
+          <td>${fmtEUR.format(c.salMes)}</td>
+          <td>${fmtEUR.format(c.plusMes)}</td>
+          <td>${fmtEUR.format(c.dietaMes)}</td>
+          <td>${fmtEUR.format(c.bruto_pura)}</td>
+          <td>${fmtEUR.format(c.irpf_pura)}</td>
+          <td>${fmtEUR.format(c.ss_pura)}</td>
+          <td><b>${fmtEUR.format(c.neto_pura)}</b></td>
+          <td>${it.extra ? fmtEUR.format(it.extra.bruto) : dash}</td>
+          <td>${it.extra ? '<b>'+fmtEUR.format(it.extra.neto)+'</b>' : dash}</td>
+        </tr>
+      `;
+    }
+    calHtml += `
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>Σ</td><td>—</td>
+              <td>${fmtEUR.format(accSal)}</td>
+              <td>${fmtEUR.format(accPlus)}</td>
+              <td>${fmtEUR.format(accDieta)}</td>
+              <td>${fmtEUR.format(accBruto)}</td>
+              <td>${fmtEUR.format(accIRPF)}</td>
+              <td>${fmtEUR.format(accSS)}</td>
+              <td>${fmtEUR.format(accNeto)}</td>
+              <td>${fmtEUR.format(accExtraBruto)}</td>
+              <td>${fmtEUR.format(accExtraNeto)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    `;
+
+    // Vaciar la tabla unificada anterior y en su lugar poner tabla mes-a-mes + resumen
+    const cont = document.querySelector("#view-ano section.block");
+    // Reemplazar el contenido si existe una tabla anterior
+    cont.querySelector("h2").textContent = "Año — desglose mes a mes";
+    // Insertar la tabla del calendario antes de la tabla unificada
+    let calWrap = cont.querySelector(".month-calendar-wrap");
+    if (!calWrap) {
+      calWrap = document.createElement("div");
+      calWrap.className = "month-calendar-wrap";
+      cont.querySelector("table.unified").parentNode
+        .insertBefore(calWrap, cont.querySelector("table.unified"));
+    }
+    calWrap.innerHTML = calHtml;
+
+    // Resumen unificado
+    const rows = [
+      { type: "header", label: `Resumen del año (${duracion} meses)` },
+      { type: "row",    label: `Salario base acumulado <span class="pill brut">bruto</span>`, bruto: accSal },
+      { type: "row",    label: `Plus desplazamiento acumulado <span class="pill brut">bruto</span>`, bruto: accPlus },
+      { type: "exempt", label: `Dieta manutención acumulada <span class="pill exempt">exenta</span>`, bruto: accDieta },
+    ];
+    if (nExtrasCobradas > 0) {
+      rows.push({ type: "row", label: `Pagas extras cobradas (${nExtrasCobradas}) <span class="pill brut">bruto</span> <span class="pill no-ss">SS no cotiza</span>`, bruto: accExtraBruto });
+    }
+    rows.push({ type: "retention", label: `Retención IRPF total`, ret: irpfTotal });
+    rows.push({ type: "retention", label: `Seguridad Social trabajador total`, ret: ssTotal });
+    rows.push({ type: "total", label: `Total ${scopeLbl}`, bruto: brutoTotal, ret: irpfTotal + ssTotal, neto: netoTotal });
+    renderUnifiedTable($("tbl-ano-unified").querySelector("tbody"), rows);
+  }
+
+  // === Modo ESTANCIA: tabla editable mes a mes ===
+  if (I.scope === "estancia") {
+    let html = "";
+    for (const it of items) {
+      const c = it.calc;
+      const cls = it.isModified ? 'modified' : '';
+      // Fila del mes (solo mensualidad, sin extra)
+      html += `
+        <tr class="${cls}" data-mes="${it.mesNum}">
+          <td>${it.label}</td>
+          <td class="editable"><input type="number" data-field="dias" data-mes="${it.mesNum}" value="${it.dias}" min="0" max="31"></td>
+          <td class="editable"><input type="number" data-field="salario" data-mes="${it.mesNum}" value="${it.salario.toFixed(0)}" min="0" step="100" style="width:80px"></td>
+          <td>${fmtEUR.format(c.plusMes)}</td>
+          <td>${fmtEUR.format(c.dietaMes)}</td>
+          <td>${fmtEUR.format(c.bruto_pura)}</td>
+          <td>${fmtEUR.format(c.irpf_pura)}</td>
+          <td>${fmtEUR.format(c.ss_pura)}</td>
+          <td><b>${fmtEUR.format(c.neto_pura)}</b></td>
+        </tr>
+      `;
+      // Si toca extra este mes, fila separada
+      if (it.extra) {
+        const e = it.extra;
+        const pct = (e.mesesDevengo/6*100).toFixed(0);
+        html += `
+          <tr class="extra-row">
+            <td>Extra ${it.label}</td>
+            <td colspan="4" style="text-align:left;padding-left:14px">Paga extra prorrateada · ${e.mesesDevengo}/6 meses devengados (${pct}%)</td>
+            <td>${fmtEUR.format(e.bruto)}</td>
+            <td>${fmtEUR.format(e.irpf)}</td>
+            <td>—</td>
+            <td><b>${fmtEUR.format(e.neto)}</b></td>
+          </tr>
+        `;
+      }
+    }
+    $("tbl-meses").querySelector("tbody").innerHTML = html;
+    $("meses-totals").innerHTML = `
+      <td>Σ</td>
+      <td>—</td>
+      <td>${fmtEUR.format(accSal + accExtraBruto)}</td>
+      <td>${fmtEUR.format(accPlus)}</td>
+      <td>${fmtEUR.format(accDieta)}</td>
+      <td>${fmtEUR.format(accBruto + accExtraBruto)}</td>
+      <td>${fmtEUR.format(accIRPF + accExtraIRPF)}</td>
+      <td>${fmtEUR.format(accSS)}</td>
+      <td>${fmtEUR.format(accNeto + accExtraNeto)}</td>
+    `;
+
+    // Listeners de edición
+    $("tbl-meses").querySelectorAll('input[data-mes]').forEach(input => {
+      input.addEventListener('input', (e) => {
+        const mes = parseInt(e.target.dataset.mes);
+        const field = e.target.dataset.field;
+        const val = parseFloat(e.target.value);
+        if (!STATE.monthOverrides[mes]) STATE.monthOverrides[mes] = {};
+        STATE.monthOverrides[mes][field] = val;
+        calcular();
+      });
+    });
+
+    // Resumen unificado
+    const rows = [
+      { type: "header", label: `Resumen de la estancia (${duracion} meses)` },
+      { type: "row",    label: `Salario base acumulado <span class="pill brut">bruto</span>`, bruto: accSal },
+      { type: "row",    label: `Plus desplazamiento acumulado <span class="pill brut">bruto</span>`, bruto: accPlus },
+      { type: "exempt", label: `Dieta manutención acumulada <span class="pill exempt">exenta</span>`, bruto: accDieta },
+    ];
+    if (nExtrasCobradas > 0) {
+      rows.push({ type: "row", label: `Pagas extras cobradas (${nExtrasCobradas}) <span class="pill brut">bruto</span> <span class="pill no-ss">SS no cotiza</span>`, bruto: accExtraBruto });
+    }
+    rows.push({ type: "retention", label: `Retención IRPF total`, ret: irpfTotal });
+    rows.push({ type: "retention", label: `Seguridad Social trabajador total`, ret: ssTotal });
+    rows.push({ type: "total", label: "Total estancia", bruto: brutoTotal, ret: irpfTotal + ssTotal, neto: netoTotal });
+    renderUnifiedTable($("tbl-estancia-unified").querySelector("tbody"), rows);
+
+    // Cards
+    $("card-medio").innerHTML = `${fmtInt(netoMedio)},<span class="cents">${fmtCents(netoMedio)}</span> €`;
+    $("card-medio-sub").textContent = `Total ÷ ${duracion} meses`;
+    $("card-total").innerHTML = `${fmtInt(netoTotal)},<span class="cents">${fmtCents(netoTotal)}</span> €`;
+    $("card-total-sub").textContent = `Bruto ${fmtEURround(brutoTotal)} − retenciones`;
+  }
+
+  STATE.lastResult = { scope: I.scope, inputs: I, items,
+                       totals: { brutoTotal, irpfTotal, ssTotal, netoTotal, netoMedio,
+                                 accSal, accPlus, accDieta, accExtraBruto, accExtraIRPF, accExtraNeto,
+                                 nExtrasCobradas } };
+}
+
+// =============== ORQUESTADOR ===============
+function calcular() {
+  applyVisibility();
+  const I = readInputs();
+  STATE.scope = I.scope;
+
+  if (I.scope === "mes")        renderMes(I);
+  else if (I.scope === "ano")   renderCalendario(I, "año");
+  else if (I.scope === "estancia") renderCalendario(I, "estancia");
+}
+
+// =============== JSON SAVE / LOAD ===============
+function getInputState() {
+  return {
+    scope: document.querySelector('input[name="scope"]:checked').value,
+    salario: $("salario").value,
+    hasExtras: document.querySelector('input[name="hasExtras"]:checked').value,
+    numExtras: $("num-extras").value,
+    origen: $("origen").value,
+    destino: $("destino").value,
+    nuclear: document.querySelector('input[name="nuclear"]:checked').value,
+    diasMes: $("dias-mes").value,
+    diasDefecto: $("dias-defecto").value,
+    fechaInicio: $("fecha-inicio").value,
+    fechaFin: $("fecha-fin").value,
+    extraMes1: $("extra-mes-1").value,
+    extraMes2: $("extra-mes-2").value,
+    duracion: $("duracion").value,
+    hasRaise: document.querySelector('input[name="hasRaise"]:checked').value,
+    raisePct: $("raise-pct").value,
+    raiseMes: $("raise-mes").value,
+    mesActual: $("mes-actual").value,
+    irpfMode: document.querySelector('input[name="irpfMode"]:checked').value,
+    irpfPctManual: $("irpf-pct-manual").value,
+    ss: $("ss").value,
+    monthOverrides: STATE.monthOverrides,
+  };
+}
+
+function setInputState(s) {
+  if (!s) return;
+  document.querySelector(`input[name="scope"][value="${s.scope}"]`).checked = true;
+  $("salario").value = s.salario;
+  document.querySelector(`input[name="hasExtras"][value="${s.hasExtras}"]`).checked = true;
+  $("num-extras").value = s.numExtras;
+  $("origen").value = s.origen;
+  $("destino").value = s.destino;
+  document.querySelector(`input[name="nuclear"][value="${s.nuclear}"]`).checked = true;
+  $("dias-mes").value = s.diasMes;
+  if (s.diasDefecto != null) $("dias-defecto").value = s.diasDefecto;
+  if (s.fechaInicio) $("fecha-inicio").value = s.fechaInicio;
+  if (s.fechaFin)    $("fecha-fin").value = s.fechaFin;
+  if (s.extraMes1 != null) $("extra-mes-1").value = s.extraMes1;
+  if (s.extraMes2 != null) $("extra-mes-2").value = s.extraMes2;
+  $("duracion").value = s.duracion;
+  document.querySelector(`input[name="hasRaise"][value="${s.hasRaise}"]`).checked = true;
+  $("raise-pct").value = s.raisePct;
+  $("raise-mes").value = s.raiseMes;
+  $("mes-actual").value = s.mesActual;
+  document.querySelector(`input[name="irpfMode"][value="${s.irpfMode}"]`).checked = true;
+  $("irpf-pct-manual").value = s.irpfPctManual;
+  $("ss").value = s.ss;
+  STATE.monthOverrides = s.monthOverrides || {};
+  calcular();
+}
+
+function saveJSON() {
+  const data = {
+    version: 3,
+    generated: new Date().toISOString(),
+    app: "IDOM Calculadora Dietas/Pluses/IRPF",
+    state: getInputState(),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  const dst  = $("destino").value.replace(/[^a-zA-Z0-9]/g, '_');
+  const ts   = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `IDOM_Calculadora_${dst}_${ts}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  flashBtn($("btn-save"), "Guardado");
+}
+
+function loadJSON(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.state) setInputState(data.state);
+      flashBtn($("btn-load"), "Cargado");
+    } catch (err) {
+      alert("Archivo inválido: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function flashBtn(btn, text) {
+  const orig = btn.innerHTML;
+  btn.classList.add("success");
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M5 12l5 5L20 7"/></svg> ${text}`;
+  setTimeout(() => { btn.classList.remove("success"); btn.innerHTML = orig; }, 1500);
+}
+
+// =============== EXPORT EXCEL ===============
+function exportExcel() {
+  if (!STATE.lastResult) return;
+  const R = STATE.lastResult;
+  const I = R.inputs;
+  const wb = XLSX.utils.book_new();
+  const EUR = "#,##0.00 \\€";
+  const PCT = "0.0%";
+
+  function makeSheet(rows, opts = {}) {
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = opts.cols || [{wch: 50}, {wch: 22}];
+    if (opts.numCells) {
+      for (const {r, c, fmt} of opts.numCells) {
+        const ref = XLSX.utils.encode_cell({r, c});
+        if (ws[ref]) { ws[ref].t = 'n'; ws[ref].z = fmt; }
+      }
+    }
+    return ws;
+  }
+
+  // Hoja parámetros (común)
+  const paramRows = [
+    ["Calculadora IDOM Dietas / Pluses / IRPF"],
+    [`Alcance: ${I.scope}`],
+    [`Generado: ${new Date().toLocaleDateString('es-ES')}`],
+    [],
+    ["Parámetros", ""],
+    ["Salario base bruto anual",            I.salario],
+    ["Pagas extras / año",                  I.nExtras],
+    ["Total pagas",                         I.pagas],
+    ["Origen",                              I.origen],
+    ["Destino",                             I.destino],
+    ["Central nuclear",                     I.nuclear ? "Sí (+10%)" : "No"],
+    ["% plus total",                        I.pctTotal],
+    ["Dieta diaria neta (€)",               I.dietaDia],
+    ["% Seguridad Social",                  I.ss],
+    ["Régimen IRPF",                        I.irpfMode === "zero" ? "0%" : I.irpfMode === "manual" ? "Manual" : "Diputación Bizkaia"],
+  ];
+  if (I.irpfMode === "manual") paramRows.push(["% IRPF manual", I.irpfPctManual]);
+  if (I.scope !== "mes") {
+    paramRows.push(["Días/mes (plantilla)",   I.diasMesTemplate]);
+    paramRows.push(["Subida prevista",        I.hasRaise ? "Sí" : "No"]);
+    if (I.hasRaise) {
+      paramRows.push(["% subida",             I.raisePct]);
+      paramRows.push(["Entra en vigor mes",   I.raiseMes]);
+    }
+  }
+  if (I.scope === "estancia") paramRows.push(["Duración (meses)", I.duracion]);
+  if (I.scope === "mes") paramRows.push(["Días en destino este mes", I.diasMes]);
+
+  const paramFormats = [];
+  for (let i = 0; i < paramRows.length; i++) {
+    const v = paramRows[i][1];
+    const label = paramRows[i][0];
+    if (typeof v !== "number") continue;
+    if (["% plus total","% Seguridad Social","% IRPF manual","% subida"].includes(label)) {
+      paramFormats.push({r:i, c:1, fmt: PCT});
+    } else if (["Salario base bruto anual","Dieta diaria neta (€)"].includes(label)) {
+      paramFormats.push({r:i, c:1, fmt: EUR});
+    }
+  }
+  XLSX.utils.book_append_sheet(wb, makeSheet(paramRows, { cols: [{wch: 36},{wch: 22}], numCells: paramFormats }), "Parámetros");
+
+  // Hoja específica
+  if (I.scope === "mes") {
+    const c = R.calc;
+    const rows = [
+      ["Cálculo de un mes"],
+      [],
+      ["Concepto", "Bruto", "Retención", "Neto"],
+      // A
+      [`A — Mensualidad pura`,                      "", "", ""],
+      ["Salario base mensual",                      c.salMes,    "", c.salMes],
+      ["Plus desplazamiento",                       c.plusMes,   "", c.plusMes],
+      ["Dieta manutención (exenta)",                c.dietaMes,  "exenta", c.dietaMes],
+      [`Retención IRPF (${(c.irpfApli*100).toFixed(1)}%)`, "",    -c.irpf_pura, ""],
+      [`Seguridad Social trabajador (${(I.ss*100).toFixed(2)}%)`, "", -c.ss_pura, ""],
+      [`TOTAL A`,                                   c.bruto_pura, -(c.irpf_pura + c.ss_pura), c.neto_pura],
+    ];
+    if (I.nExtras > 0) {
+      rows.push([]);
+      rows.push([`B — Mensualidad + 1/12 paga extra`, "", "", ""]);
+      rows.push(["Salario base mensual",            c.salMes,    "", c.salMes]);
+      rows.push([`+ Prorrateo extra (${I.nExtras}/12)`, c.extraProrr, "", c.extraProrr]);
+      rows.push(["Plus desplazamiento",             c.plusMes,   "", c.plusMes]);
+      rows.push(["Dieta manutención (exenta)",      c.dietaMes,  "exenta", c.dietaMes]);
+      rows.push([`Retención IRPF`,                  "",          -c.irpf_prorr, ""]);
+      rows.push([`Seguridad Social`,                "",          -c.ss_prorr, ""]);
+      rows.push([`TOTAL B`,                         c.bruto_prorr, -(c.irpf_prorr + c.ss_prorr), c.neto_prorr]);
+      rows.push([]);
+      rows.push([`C — Paga extra (sola, cuando se cobra)`, "", "", ""]);
+      rows.push(["Salario base de la extra",        c.bruto_extra, "", c.bruto_extra]);
+      rows.push([`Retención IRPF`,                  "",          -c.irpf_extra, ""]);
+      rows.push(["Seguridad Social",                "",          "no cotiza", ""]);
+      rows.push([`TOTAL C`,                         c.bruto_extra, -c.irpf_extra, c.neto_extra]);
+    }
+    // Formatos
+    const numCells = [];
+    for (let i = 0; i < rows.length; i++) {
+      for (let cc = 1; cc <= 3; cc++) {
+        if (typeof rows[i][cc] === "number") numCells.push({r:i, c:cc, fmt: EUR});
+      }
+    }
+    XLSX.utils.book_append_sheet(wb, makeSheet(rows, { cols: [{wch:42},{wch:14},{wch:14},{wch:14}], numCells }), "Mes");
+  } else if (I.scope === "ano") {
+    // Año: exportar tabla mes a mes (mismo formato que estancia) + resumen
+    const rows = [
+      ["Cálculo año mes a mes"],
+      [],
+      ["Mes","Días","Salario mens.","Plus","Dieta","Bruto","IRPF","SS","Neto","Extra bruta","Extra neta"],
+    ];
+    for (const m of R.items) {
+      rows.push([m.label, m.dias, m.calc.salMes, m.calc.plusMes, m.calc.dietaMes,
+                 m.calc.bruto_pura, m.calc.irpf_pura, m.calc.ss_pura, m.calc.neto_pura,
+                 m.extra ? m.extra.bruto : "",
+                 m.extra ? m.extra.neto  : ""]);
+    }
+    rows.push(["TOTAL","",
+      R.totals.accSal, R.totals.accPlus, R.totals.accDieta,
+      R.totals.brutoTotal - R.totals.accExtraBruto,
+      R.totals.irpfTotal - R.totals.accExtraIRPF,
+      R.totals.ssTotal,
+      R.totals.brutoTotal - R.totals.accExtraBruto - (R.totals.irpfTotal - R.totals.accExtraIRPF) - R.totals.ssTotal,
+      R.totals.accExtraBruto, R.totals.accExtraNeto,
+    ]);
+    const numCells = [];
+    for (let i = 2; i < rows.length; i++) {
+      for (let cc = 2; cc <= 10; cc++) {
+        if (typeof rows[i][cc] === "number") numCells.push({r:i, c:cc, fmt: EUR});
+      }
+    }
+    XLSX.utils.book_append_sheet(wb, makeSheet(rows, {
+      cols: [{wch:12},{wch:8}].concat(Array(9).fill({wch:14})),
+      numCells
+    }), "Año mes a mes");
+  } else {
+    // estancia: una fila por mes
+    const rows = [
+      ["Cálculo estancia mes a mes"],
+      [],
+      ["Mes","Días destino","Salario mens.","Plus","Dieta","Bruto","IRPF","SS","Neto","Extra bruta", "Extra neta"],
+    ];
+    for (const m of R.items) {
+      rows.push([m.label, m.dias, m.calc.salMes, m.calc.plusMes, m.calc.dietaMes,
+                 m.calc.bruto_pura, m.calc.irpf_pura, m.calc.ss_pura, m.calc.neto_pura,
+                 m.extra ? m.extra.bruto : "",
+                 m.extra ? m.extra.neto  : ""]);
+    }
+    rows.push(["TOTAL","",
+      R.totals.accSal, R.totals.accPlus, R.totals.accDieta,
+      R.totals.brutoTotal - R.totals.accExtraBruto, // bruto sin extras
+      R.totals.irpfTotal - R.totals.accExtraIRPF,
+      R.totals.ssTotal,
+      R.totals.brutoTotal - R.totals.accExtraBruto - (R.totals.irpfTotal - R.totals.accExtraIRPF) - R.totals.ssTotal,
+      R.totals.accExtraBruto, R.totals.accExtraNeto
+    ]);
+    const numCells = [];
+    for (let i = 2; i < rows.length; i++) {
+      for (let cc = 2; cc <= 10; cc++) {
+        if (typeof rows[i][cc] === "number") numCells.push({r:i, c:cc, fmt: EUR});
+      }
+    }
+    XLSX.utils.book_append_sheet(wb, makeSheet(rows, {
+      cols: [{wch:6},{wch:12}].concat(Array(9).fill({wch:14})),
+      numCells
+    }), "Estancia mes a mes");
+
+    // Resumen
+    const sumRows = [
+      ["Resumen estancia"], [],
+      ["Concepto","Bruto","Retención","Neto"],
+      ["Salario acumulado",    R.totals.accSal, "", R.totals.accSal],
+      ["Plus acumulado",       R.totals.accPlus, "", R.totals.accPlus],
+      ["Dieta acumulada",      R.totals.accDieta, "exenta", R.totals.accDieta],
+      ["Pagas extras acum.",   R.totals.accExtraBruto, "", R.totals.accExtraBruto],
+      ["IRPF total",           "", -R.totals.irpfTotal, ""],
+      ["SS total",             "", -R.totals.ssTotal, ""],
+      ["TOTAL ESTANCIA",       R.totals.brutoTotal, -(R.totals.irpfTotal + R.totals.ssTotal), R.totals.netoTotal],
+      ["Neto medio mensual",   "", "", R.totals.netoMedio],
+    ];
+    const sumNumCells = [];
+    for (let i = 0; i < sumRows.length; i++) {
+      for (let cc = 1; cc <= 3; cc++) {
+        if (typeof sumRows[i][cc] === "number") sumNumCells.push({r:i, c:cc, fmt: EUR});
+      }
+    }
+    XLSX.utils.book_append_sheet(wb, makeSheet(sumRows, { cols: [{wch:30},{wch:14},{wch:14},{wch:14}], numCells: sumNumCells }), "Resumen");
+  }
+
+  const dst = I.destino.replace(/[^a-zA-Z0-9]/g, '_');
+  const ts  = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `IDOM_${I.scope}_${dst}_${ts}.xlsx`);
+
+  flashBtn($("btn-export"), "Descargado");
+}
+
+// =============== LISTENERS ===============
+populateSelects();
+
+document.querySelectorAll('aside.panel input, aside.panel select').forEach(el => {
+  el.addEventListener('input', calcular);
+  el.addEventListener('change', calcular);
+});
+
+// Cambio de scope: limpiar personalizaciones cuando cambias a estancia desde otro modo
+document.querySelectorAll('input[name="scope"]').forEach(el => {
+  el.addEventListener('change', () => {
+    // No limpiamos, sólo recalcular. Las personalizaciones persisten para estancia.
+    calcular();
+  });
+});
+
+$("btn-save").addEventListener("click", saveJSON);
+$("btn-load").addEventListener("click", () => $("file-input").click());
+$("file-input").addEventListener("change", (e) => {
+  if (e.target.files.length) loadJSON(e.target.files[0]);
+  e.target.value = "";
+});
+$("btn-export").addEventListener("click", exportExcel);
+$("btn-reset-meses").addEventListener("click", () => {
+  STATE.monthOverrides = {};
+  calcular();
+});
+
+// Init
+calcular();
+</script>
+</body>
+</html>
