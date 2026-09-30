@@ -317,10 +317,10 @@
         <div class="hint">Se puede cambiar mes a mes en la tabla del calendario. Las dietas no cuentan para el tipo de IRPF.</div>
       </div>
       <div class="field">
-        <label class="check"><input type="checkbox" id="regla183" checked> Residente fiscal en España: sin IRPF el año natural con menos de 183 días en España</label>
+        <label class="check"><input type="checkbox" id="regla183" checked> Sin IRPF el año natural en que estás menos de 183 días fuera</label>
       </div>
       <div class="field">
-        <label class="check"><input type="checkbox" id="tope" checked> El resto de años, IDOM compensa para que no pagues más IRPF que quedándote en España</label>
+        <label class="check"><input type="checkbox" id="tope" checked> Con 183 días o más fuera, tributa, pero IDOM compensa para que no pagues más IRPF que quedándote en España</label>
       </div>
     </div>
 
@@ -546,7 +546,7 @@
       <p><b>IRPF.</b> Tabla general de retenciones sobre trabajo personal de la Diputación Foral de Bizkaia vigente desde el 01/01/2026, con descendientes y reducciones por discapacidad. En el calendario la retención se regulariza cada mes: el tipo se recalcula con lo cobrado en el año y lo que queda por cobrar en las condiciones de ese mes, igual que hace la nómina cuando cambia el sueldo o te desplazas. El modo por tramos no existe en la normativa foral, solo sirve de contraste.</p>
       <p><b>Seguridad Social.</b> Cuota obrera del 6,50 % (contingencias comunes 4,70 + MEI 0,15 + desempleo, FOGASA y formación 1,65). La base mensual incluye la prorrata de las extras y el plus, con los topes mínimo y máximo, así que las extras no cotizan en el mes en que se cobran.</p>
       <p><b>Desplazamiento.</b> Plus = salario anual ÷ 365 × % × días en destino, con un 15 % de base, más la diferencia de porcentaje si el destino tiene más que el origen, y +10 % en central nuclear. Las dietas de manutención son netas y exentas de IRPF y SS dentro de los límites del art. 13 NF 13/2013; el alojamiento lo paga IDOM directamente y no aparece. Las pagas extras solo llevan salario base, sin plus ni dietas.</p>
-      <p><b>Residencia fiscal y tope de IDOM.</b> Si en un año natural pasas menos de 183 días en España (contando días naturales entre la salida y el regreso), ese año no se retiene IRPF. En los años en que sigues siendo residente, IDOM compensa la diferencia para que no pagues más IRPF que si te hubieras quedado en España. Las dietas nunca cuentan para el tipo de retención.</p>
+      <p><b>Residencia fiscal y tope de IDOM.</b> Si en un año natural estás menos de 183 días fuera (días naturales entre la salida y el regreso), ese año no se retiene IRPF. Si estás 183 días o más fuera, ese año tributa e IDOM compensa la diferencia para que no pagues más IRPF que si te hubieras quedado en España. Las dietas nunca cuentan para el tipo de retención.</p>
       <p><b>Variable.</b> Se cobra íntegro en febrero, sin prorratear ni entrar en las extras ni en el plus. Suma para calcular el tipo de IRPF de todo el año y cotiza en febrero hasta la base máxima.</p>
       <p>Cálculo orientativo. La retención es un pago a cuenta: la cuota definitiva sale en la declaración y puede haber exenciones por trabajos en el extranjero que aquí no se aplican.</p>
     </footer>
@@ -773,7 +773,7 @@ function residencia(P,y,est){
     fuera=Math.max(0,b-a+1);
   }
   const espana=diasAnio-fuera;
-  return {fuera,espana,noRes:!!(est&&P.regla183&&espana<183)};
+  return {fuera,espana,noRes:!!(est&&P.regla183&&fuera>0&&fuera<183)};
 }
 
 /* Un año natural mes a mes. est=true aplica la estancia (plus y dietas). */
@@ -1265,8 +1265,8 @@ function pintarEstancia(P){
     '<td class="n">IRPF del año que pagas</td></tr>';
   for(const a of E.anios){
     const R=a.res, irpfPagas=a.con.tot.irpf-a.comp;
-    const sit=R.noRes?'<span class="pill nores">Menos de 183 días en España · sin IRPF</span>'
-      :'<span class="pill res">183 días o más en España · tributa</span>';
+    const sit=R.noRes?'<span class="pill nores">Menos de 183 días fuera · sin IRPF</span>'
+      :'<span class="pill res">183 días o más fuera · tributa</span>';
     ha+=`<tr><td>${a.y}</td><td class="n">${R.fuera}</td><td class="n">${R.espana}</td><td>${sit}</td>
       <td class="n">${eur(a.sin.tot.irpf)}</td><td class="n">${eur(a.con.tot.irpf)}</td>
       ${P.tope?`<td class="n ${a.comp>0?'pos':''}">${a.comp>0?'+'+eur(a.comp):'—'}</td>`:''}
@@ -1274,8 +1274,8 @@ function pintarEstancia(P){
   }
   $('eAnios').innerHTML=ha;
   $('eAniosNota').innerHTML=(P.regla183
-      ?'Si un año natural pasas <b>183 días o más en España</b>, sigues siendo residente y ese año tributa. Si pasas <b>menos de 183</b>, ese año no se retiene IRPF. '
-      :'La regla de los 183 días está desactivada: todos los años tributan en España. ')+
+      ?'Si un año natural estás <b>menos de 183 días fuera</b>, ese año no se retiene IRPF. Si estás <b>183 días o más fuera</b>, ese año tributa. '
+      :'La regla de los 183 días está desactivada: todos los años tributan. ')+
     (P.tope?'En los años que tributan, IDOM compensa para que no pagues más IRPF que quedándote en España; la diferencia se abona al cerrar el año. ':'')+
     'Esta tabla es del año completo, para ver de dónde sale el tipo.';
 
@@ -1292,7 +1292,7 @@ function tablaEstancia(E,P){
   for(const a of E.anios){
     const R=a.res;
     h+=`<tr class="yrow"><td colspan="${nc}">${a.y} <span class="tag">· ${R.fuera} días fuera, ${R.espana} en España</span> `+
-      (R.noRes?'<span class="pill nores">Menos de 183 días en España · sin IRPF</span>':'<span class="pill res">Tributa en España</span>')+'</td></tr>';
+      (R.noRes?'<span class="pill nores">Menos de 183 días fuera · sin IRPF</span>':'<span class="pill res">183 días o más fuera · tributa</span>')+'</td></tr>';
     for(const F of a.filas){
       const M=F.M, D=M.D;
       const sit={destino:'En destino',salida:'Sale el '+D.d0,regreso:'Vuelve el '+D.d1,'ida-vuelta':'Del '+D.d0+' al '+D.d1}[D.sit];
@@ -1331,7 +1331,7 @@ function tablaAnio(A,P,est,soloAnio,sin){
   let cab='';
   if(est&&A.res){
     cab='<span class="tag">'+A.res.fuera+' días fuera · '+A.res.espana+' en España</span> '+
-      (A.res.noRes?'<span class="pill nores">No residente · sin IRPF</span>':'<span class="pill res">Residente</span>');
+      (A.res.noRes?'<span class="pill nores">Menos de 183 días fuera · sin IRPF</span>':'<span class="pill res">Tributa</span>');
   }
   let h='<div class="yh">'+(soloAnio?'':'<b>'+A.y+'</b>')+'<span>'+cab+'</span></div>';
   h+='<div class="scrollx"><table class="cal"><thead><tr><th>Mes</th>'+
@@ -1628,7 +1628,7 @@ $('btnExcel').addEventListener('click',()=>{
       .forEach(([l,a,b])=>rows.push([l,a,b,a-b]));
     rows.push([],['Días naturales fuera',T.fuera],['Días en destino (plus y dietas)',T.dias]);
     const res=[['Año','Días fuera','Días en España','Situación','IRPF sin desplazarte','IRPF retenido','Compensación IDOM','IRPF que pagas']];
-    for(const a of E.anios) res.push([a.y,a.res.fuera,a.res.espana,a.res.noRes?'Menos de 183 días: sin IRPF':'Tributa',
+    for(const a of E.anios) res.push([a.y,a.res.fuera,a.res.espana,a.res.noRes?'Menos de 183 días fuera: sin IRPF':'183 días o más fuera: tributa',
       a.sin.tot.irpf,a.con.tot.irpf,a.comp,a.con.tot.irpf-a.comp]);
     XLSX.utils.book_append_sheet(wb,hoja(rows,[32,16,16,16],(r,c)=>r&&c&&r<=10?EUR:null),'Desglose estancia');
     XLSX.utils.book_append_sheet(wb,hoja(res,[6,11,14,28,18,14,18,14],(r,c)=>r&&c>=4?EUR:null),'Residencia fiscal');
