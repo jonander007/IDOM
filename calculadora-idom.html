@@ -281,10 +281,11 @@
     </div>
     <div class="field solo-14">
       <label class="lab">Pagas extras</label>
-      <div class="seg" id="segCobro">
+      <div class="seg no-estancia" id="segCobro">
         <button type="button" data-v="aparte" aria-pressed="true">Se cobran aparte</button>
         <button type="button" data-v="prorr" aria-pressed="false">Prorrateadas</button>
       </div>
+      <div class="hint solo-estancia" style="margin-top:0">En la estancia cada extra sale como partida aparte en su mes.</div>
       <div class="row2" style="margin-top:8px">
         <div><select id="extra1" aria-label="Mes de la primera extra"></select><div class="hint">1.ª extra</div></div>
         <div><select id="extra2" aria-label="Mes de la segunda extra"></select><div class="hint">2.ª extra</div></div>
@@ -833,6 +834,15 @@ function residencia(P,y,est){
   return {fuera,espana,noRes:!!(est&&P.regla183&&fuera>0&&fuera<183)};
 }
 
+/* Parte del mes absoluto i que pasas fuera (días naturales entre salida y regreso) */
+function fraccionFuera(P,i){
+  if(!P.salida||!P.regreso)return 0;
+  const y0=Math.floor(i/12), m0=i%12+1, dim=diasMes(y0,m0);
+  const a=Math.max(diaNum(P.salida.y,P.salida.m,P.salida.d),diaNum(y0,m0,1));
+  const b=Math.min(diaNum(P.regreso.y,P.regreso.m,P.regreso.d),diaNum(y0,m0,dim));
+  return Math.max(0,b-a+1)/dim;
+}
+
 /* Un año natural mes a mes. est=true aplica la estancia (plus y dietas). */
 function simularAnio(P,y,est){
   const meses=[];
@@ -859,13 +869,7 @@ function simularAnio(P,y,est){
      Año con menos de 183 días fuera: lo cobrado fuera (salario de esos días, plus y la parte
      de extras y variable) no tributa; lo cobrado en España sí. El tipo sale de todo el año. */
   const ex=RES.noRes;
-  const fa=i=>{
-    if(!ex)return 0;
-    const y0=Math.floor(i/12), m0=i%12+1, dim=diasMes(y0,m0);
-    const a=Math.max(diaNum(P.salida.y,P.salida.m,P.salida.d),diaNum(y0,m0,1));
-    const b=Math.min(diaNum(P.regreso.y,P.regreso.m,P.regreso.d),diaNum(y0,m0,dim));
-    return Math.max(0,b-a+1)/dim;
-  };
+  const fa=i=>ex?fraccionFuera(P,i):0;
   const raV=ex?RES.fuera/(RES.fuera+RES.espana):0;
   let retenido=0, acum=0, acumTax=0;
   for(const M of meses){
@@ -1235,44 +1239,66 @@ function pintarLineas(P,R,aparte){
 /* Parte de un año que corresponde a la estancia: salario y extras en proporción a los
    días naturales fuera, plus y dietas enteros. El tipo de IRPF sale del año completo. */
 function porcionEstancia(con,sin,P){
+  /* Filas: 'mes' (salario de los días del periodo, plus y dietas), 'extra' y 'var' (partidas
+     aparte en el mes en que se cobran, enteras) y 'pend' (extra aún no cobrada al acabar el periodo) */
   const filas=[];
   const T={sal:0,ext:0,variable:0,plus:0,dieta:0,irpf:0,ss:0,neto:0,fuera:0,dias:0,comp:0,periodo:0};
   const B={sal:0,ext:0,variable:0,irpf:0,ss:0,neto:0};
+  const ex=con.res.noRes;
   const ea=diaNum(P.salida.y,P.salida.m,P.salida.d), eb=diaNum(P.regreso.y,P.regreso.m,P.regreso.d);
   const solape=(a0,a1,b0,b1)=>Math.max(0,Math.min(a1,b1)-Math.max(a0,b0)+1);
+  const suma=(r,rs,campo)=>{
+    T[campo]+=r.imp; T.irpf+=r.irpf; T.ss+=r.ss; T.neto+=r.neto;
+    B[campo]+=r.imp; B.irpf+=rs.irpf; B.ss+=rs.ss; B.neto+=r.netoS;
+  };
   con.meses.forEach((M,k)=>{
     const dim=diasMes(M.y,M.m), m0=diaNum(M.y,M.m,1), m1=diaNum(M.y,M.m,dim);
     const enPer=solape(m0,m1,P.per.a,P.per.b); if(!enPer)return;
     const D=M.D, Ms=sin.meses[k], f=enPer/dim;
     const nat=solape(Math.max(m0,P.per.a),Math.min(m1,P.per.b),ea,eb);
-    const acr=P.pagas===14?M.salMes/largoPeriodo(P,M.m):0;
-    const acrS=P.pagas===14?Ms.salMes/largoPeriodo(P,M.m):0;
-    const sal=M.salMes*f, ext=acr*f, suj=sal+ext+M.plus;
-    const tax=con.res.noRes?(sal+ext)*(enPer-nat)/enPer:suj;
+    const sal=M.salMes*f, suj=sal+M.plus;
+    const tax=ex?sal*(enPer-nat)/enPer:suj;
     const irpf=M.tipo*tax, ss=Math.max(0,M.ss-Ms.ss*(1-f));
     const neto=suj+M.dieta-irpf-ss;
-    const salS=Ms.salMes*f, extS=acrS*f, irpfS=Ms.tipo*(salS+extS), ssS=Ms.ss*f;
-    const netoS=salS+extS-irpfS-ssS;
-    filas.push({M,nat,f,enPer,sal,ext,plus:M.plus,dieta:M.dieta,suj,dev:suj+M.dieta,tipo:M.tipo,irpf,ss,neto,netoS});
-    T.sal+=sal; T.ext+=ext; T.plus+=M.plus; T.dieta+=M.dieta; T.irpf+=irpf; T.ss+=ss; T.neto+=neto;
+    const salS=Ms.salMes*f, irpfS=Ms.tipo*salS, ssS=Ms.ss*f;
+    filas.push({tipoFila:'mes',M,nat,f,enPer,sal,plus:M.plus,dieta:M.dieta,suj,dev:suj+M.dieta,irpf,ss,neto,netoS:salS-irpfS-ssS});
+    T.sal+=sal; T.plus+=M.plus; T.dieta+=M.dieta; T.irpf+=irpf; T.ss+=ss; T.neto+=neto;
     T.fuera+=nat; T.dias+=D.dias; T.periodo+=enPer;
-    B.sal+=salS; B.ext+=extS; B.irpf+=irpfS; B.ss+=ssS; B.neto+=netoS;
+    B.sal+=salS; B.irpf+=irpfS; B.ss+=ssS; B.neto+=salS-irpfS-ssS;
+    if(M.extraInfo&&M.extra>0){
+      const r={tipoFila:'extra',M,info:M.extraInfo,imp:M.extra,irpf:M.irpfExtra,ss:0,
+               neto:M.extra-M.irpfExtra,netoS:Ms.extra-Ms.irpfExtra};
+      filas.push(r); suma(r,{irpf:Ms.irpfExtra,ss:0},'ext');
+    }
+    if(M.variable>0){
+      const r={tipoFila:'var',M,imp:M.variable,irpf:M.irpfVar,ss:M.ssVar,
+               neto:M.variable-M.irpfVar-M.ssVar,netoS:Ms.variable-Ms.irpfVar-Ms.ssVar};
+      filas.push(r); suma(r,{irpf:Ms.irpfVar,ss:Ms.ssVar},'variable');
+    }
   });
-  let vr=null;
-  if(P.variable>0&&filas.length){
-    const diasAnio=con.res.fuera+con.res.espana;
-    const ra=T.periodo/diasAnio;
-    const F=con.meses[1], Fs=sin.meses[1], v=P.variable*ra;
-    const vTax=con.res.noRes?v*(1-T.fuera/Math.max(1,T.periodo)):v;
-    vr={v,ra,tipo:F.tipo,irpf:F.tipo*vTax,ss:F.ssVar*ra};
-    vr.neto=v-vr.irpf-vr.ss;
-    const irpfS=Fs.tipo*v, ssS=Fs.ssVar*ra;
-    vr.netoS=v-irpfS-ssS;
-    T.variable+=v; T.irpf+=vr.irpf; T.ss+=vr.ss; T.neto+=vr.neto;
-    B.variable+=v; B.irpf+=irpfS; B.ss+=ssS; B.neto+=vr.netoS;
+  /* extra que todavía no se ha cobrado cuando acaba el periodo: lo devengado hasta ese día */
+  const fin=new Date(P.per.b*864e5), yF=fin.getUTCFullYear(), mF=fin.getUTCMonth()+1, iF=yF*12+mF-1;
+  if(P.pagas===14&&yF===con.y&&filas.length){
+    let pago=-1;
+    for(let k=iF+1;k<=iF+12;k++) if(P.extraMeses.includes(k%12+1)){pago=k;break;}
+    const per=pago>=0?periodoExtra(P,pago):[];
+    if(per.length&&per[0]<=iF){
+      let imp=0,dAcc=0,dTot=0,dFuera=0;
+      for(const k of per){
+        const yk=Math.floor(k/12), mk=k%12+1, dim=diasMes(yk,mk);
+        dTot+=dim;
+        const fr=k<iF?1:k===iF?(P.per.b-diaNum(yk,mk,1)+1)/dim:0;
+        imp+=salAnual(P,k)/P.pagas/per.length*fr;
+        dAcc+=fr*dim; dFuera+=ex?fraccionFuera(P,k)*fr*dim:0;
+      }
+      const Me=con.meses[mF-1], Mes=sin.meses[mF-1];
+      const irpf=Me.tipo*imp*(ex?1-dFuera/Math.max(1,dAcc):1), irpfS=Mes.tipo*imp;
+      const r={tipoFila:'pend',M:Me,pago,pct:dAcc/dTot,imp,irpf,ss:0,neto:imp-irpf,netoS:imp-irpfS};
+      filas.push(r); suma(r,{irpf:irpfS,ss:0},'ext');
+    }
   }
   const comp=con.comp||0; T.comp=comp; T.neto+=comp;
-  return {y:con.y,res:con.res,con,sin,filas,vr,comp,T,B};
+  return {y:con.y,res:con.res,con,sin,filas,comp,T,B};
 }
 
 /* Periodo a calcular: la estancia o los meses que elijas */
@@ -1298,6 +1324,7 @@ function datosEstancia(P){
   if(per.err) return per;
   if(per.yb-per.ya>9) return {err:'El periodo a calcular no puede pasar de 10 años naturales.'};
   P.per=per;
+  P.prorr=false;   /* en la estancia las extras van siempre como partida aparte */
   const anios=[];
   for(let y=per.ya;y<=per.yb;y++){
     const sin=simularAnio(P,y,false);
@@ -1324,7 +1351,7 @@ function pintarEstancia(P){
   const fecha=x=>x.d+' '+MESES[x.m-1]+' '+x.y;
 
   /* dashboard */
-  const completos=E.filas.filter(f=>f.M.D.sit==='destino');
+  const completos=E.filas.filter(f=>f.tipoFila==='mes'&&f.M.D.sit==='destino');
   const medio=completos.length?completos.reduce((a,f)=>a+f.neto,0)/completos.length:(T.fuera?T.neto/T.fuera*30.44:0);
   const irpfPaga=T.irpf-T.comp;
   const noRes=E.anios.filter(a=>a.res.noRes).map(a=>a.y);
@@ -1355,8 +1382,8 @@ function pintarEstancia(P){
   const cust=S.periodo==='custom';
   let h='<tr class="th"><td></td><td class="n">'+(cust?'Periodo':'Estancia')+'</td><td class="n">Si te quedas</td><td class="n">Diferencia</td></tr>';
   h+=fila('Salario <span class="tag">'+(cust?'días del periodo':'días fuera')+'</span>',T.sal,B.sal);
-  if(P.pagas===14) h+=fila('Pagas extras <span class="tag">prorrateadas a los días '+(cust?'del periodo':'fuera')+'</span>',T.ext,B.ext);
-  if(P.variable>0) h+=fila('Variable <span class="tag">parte de los días '+(cust?'del periodo':'fuera')+'</span>',T.variable,B.variable);
+  if(P.pagas===14) h+=fila('Pagas extras <span class="tag">las cobradas en el periodo'+(E.filas.some(f=>f.tipoFila==='pend')?' y lo devengado de la siguiente':'')+'</span>',T.ext,B.ext);
+  if(P.variable>0) h+=fila('Variable <span class="tag">'+(T.variable>0?'cobrado en febrero':'no hay ningún febrero en el periodo')+'</span>',T.variable,B.variable);
   h+=fila('Plus de desplazamiento',T.plus,0);
   h+=fila('Dieta de manutención <span class="tag">exenta</span>',T.dieta,0);
   h+=fila('Total devengado',T.dev,B.dev,'total');
@@ -1366,10 +1393,11 @@ function pintarEstancia(P){
   h+=fila('Líquido',T.neto,B.neto,'total');
   $('eResumen').innerHTML=h;
   $('eResNota').innerHTML=(cust
-      ?'Se calcula de '+E.per.txt+': los meses sin desplazamiento llevan el sueldo español, y las pagas extras van en proporción a los días del periodo'
-      :'Solo cuenta el periodo de la estancia: el salario de los meses de salida y regreso y las pagas extras van en proporción a los días naturales fuera')+
-    (P.variable>0?'; el variable, en proporción a los días '+(cust?'del periodo':'fuera')+' de cada año':'')+
-    '. El tipo de IRPF se calcula con todo lo que cobras en el año, estancia incluida, y las dietas no cuentan.';
+      ?'Se calcula de '+E.per.txt+': los meses sin desplazamiento llevan el sueldo español. '
+      :'Solo cuenta el periodo de la estancia; el salario de los meses de salida y regreso va por los días de cada mes. ')+
+    'Las pagas extras y el variable no se prorratean: aparecen enteros como partida aparte en el mes en que se cobran'+
+    (P.variable>0?' (el variable, en febrero)':'')+
+    ', y si al acabar el periodo aún no toca cobrar una extra, sale lo devengado hasta ese día. El tipo de IRPF se calcula con todo lo que cobras en el año y las dietas no cuentan.';
 
   /* residencia fiscal por año */
   let ha='<tr class="th"><td>Año</td><td class="n">Días fuera</td><td class="n">Días en España</td><td>Situación fiscal</td>'+
@@ -1401,42 +1429,47 @@ function celPct(imp,base){
 }
 
 function tablaEstancia(E,P){
-  const nc=12;
+  const nc=11;
   let h='<div class="scrollx"><table class="cal"><thead><tr><th>Mes</th><th>Situación</th><th class="n">Días fuera</th><th class="n">Días destino</th>'+
-    '<th class="n">Salario</th><th class="n">Extras prorr.</th><th class="n">Plus</th><th class="n">Dieta</th><th class="n">Devengado</th>'+
+    '<th class="n">Salario</th><th class="n">Plus</th><th class="n">Dieta</th><th class="n">Devengado</th>'+
     '<th class="n">IRPF</th><th class="n">SS</th><th class="n">Líquido</th></tr></thead><tbody>';
+  const partida=(et,r)=>`<tr class="extra"><td colspan="4">${et}</td><td class="n">${eur(r.imp)}</td><td class="n">—</td><td class="n">—</td>`+
+    `<td class="n">${eur(r.imp)}</td>${celPct(r.irpf,r.imp)}${r.ss>0.004?celPct(r.ss,r.imp):'<td class="n">—</td>'}<td class="n b">${eur(r.neto)}</td></tr>`;
   for(const a of E.anios){
     const R=a.res;
     h+=`<tr class="yrow"><td colspan="${nc}">${a.y} <span class="tag">· ${R.fuera} días fuera, ${R.espana} en España</span> `+
       (R.noRes?'<span class="pill nores">Menos de 183 días fuera · lo de fuera sin IRPF</span>':'<span class="pill res">183 días o más fuera · tributa</span>')+'</td></tr>';
     for(const F of a.filas){
       const M=F.M, D=M.D;
+      if(F.tipoFila==='extra'){ h+=partida('Paga extra de '+MESES_L[M.m-1]+' <span class="tag">'+F.info+'</span>',F); continue; }
+      if(F.tipoFila==='var'){ h+=partida('Variable <span class="tag">se cobra entero en febrero</span>',F); continue; }
+      if(F.tipoFila==='pend'){
+        h+=partida('Paga extra de '+MESES_L[F.pago%12]+' '+Math.floor(F.pago/12)+' <span class="tag">aún no se cobra: devengado el '+nfx.format(F.pct*100)+' % de sus días al acabar el periodo</span>',F);
+        continue;
+      }
       const enEsp=D.sit==='antes'||D.sit==='despues';
       const sit=enEsp?'En España':{destino:'En destino',salida:'Sale el '+D.d0,regreso:'Vuelve el '+D.d1,'ida-vuelta':'Del '+D.d0+' al '+D.d1}[D.sit];
       const sub=M.subida?` <span class="pill up">${signo(M.subida.pct,milar)} %</span>`:'';
       h+=`<tr class="${D.ov?'ov':''} ${enEsp?'fuera':''}"><td>${MESES[M.m-1]}</td><td>${sit}</td><td class="n">${F.nat||'—'}</td>`+
         `<td class="n">${enEsp?'—':`<input type="number" class="dias" data-k="${ymKey(M.i)}" value="${D.dias}" min="0" max="31" aria-label="Días en destino en ${MESES_L[M.m-1]} ${M.y}">`}</td>`+
-        `<td class="n">${eur(F.sal)}${sub}</td><td class="n">${eur(F.ext)}</td><td class="n">${F.plus?eur(F.plus):'—'}</td><td class="n">${F.dieta?eur(F.dieta):'—'}</td>`+
+        `<td class="n">${eur(F.sal)}${sub}</td><td class="n">${F.plus?eur(F.plus):'—'}</td><td class="n">${F.dieta?eur(F.dieta):'—'}</td>`+
         `<td class="n">${eur(F.dev)}</td>${celPct(F.irpf,F.suj)}${celPct(F.ss,F.suj)}<td class="n b">${eur(F.neto)}</td></tr>`;
     }
-    if(a.vr){
-      h+=`<tr class="extra"><td colspan="4">Variable <span class="tag">${nfx.format(a.vr.ra*100)} % del año</span></td>`+
-        `<td class="n">${eur(a.vr.v)}</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">${eur(a.vr.v)}</td>`+
-        `${celPct(a.vr.irpf,a.vr.v)}${celPct(a.vr.ss,a.vr.v)}<td class="n b">${eur(a.vr.neto)}</td></tr>`;
-    }
     if(a.comp>0){
-      h+=`<tr class="extra"><td colspan="9">Compensación IDOM <span class="tag">tope de IRPF de España</span></td>`+
+      h+=`<tr class="extra"><td colspan="8">Compensación IDOM <span class="tag">tope de IRPF de España</span></td>`+
         `<td class="n pos">+${eur(a.comp)}</td><td></td><td class="n b">+${eur(a.comp)}</td></tr>`;
     }
     const t=a.T;
     h+=`<tr class="ysub"><td colspan="2">Total ${a.y}</td><td class="n">${t.fuera}</td><td class="n">${t.dias}</td>`+
-      `<td class="n">${eur(t.sal+t.variable)}</td><td class="n">${eur(t.ext)}</td><td class="n">${eur(t.plus)}</td><td class="n">${eur(t.dieta)}</td>`+
+      `<td class="n">${eur(t.sal+t.ext+t.variable)}</td><td class="n">${eur(t.plus)}</td><td class="n">${eur(t.dieta)}</td>`+
       `<td class="n">${eur(t.sal+t.ext+t.variable+t.plus+t.dieta)}</td><td class="n">${menos(t.irpf-t.comp)}</td><td class="n">${menos(t.ss)}</td><td class="n">${eur(t.neto)}</td></tr>`;
   }
   const T=E.T;
   h+=`</tbody><tfoot><tr><td colspan="2">Total ${S.periodo==='custom'?'del periodo':'estancia'}</td><td class="n">${nf0.format(T.fuera)}</td><td class="n">${nf0.format(T.dias)}</td>`+
-    `<td class="n">${eur(T.sal+T.variable)}</td><td class="n">${eur(T.ext)}</td><td class="n">${eur(T.plus)}</td><td class="n">${eur(T.dieta)}</td>`+
+    `<td class="n">${eur(T.sal+T.ext+T.variable)}</td><td class="n">${eur(T.plus)}</td><td class="n">${eur(T.dieta)}</td>`+
     `<td class="n">${eur(T.dev)}</td><td class="n">${menos(T.irpf-T.comp)}</td><td class="n">${menos(T.ss)}</td><td class="n">${eur(T.neto)}</td></tr></tfoot></table></div>`;
+  h+='<div class="resumen-anio"><span>Salario de los meses: <b>'+eur0(T.sal)+'</b></span>'+
+    (T.ext?'<span>Pagas extras: <b>'+eur0(T.ext)+'</b></span>':'')+(T.variable?'<span>Variable: <b>'+eur0(T.variable)+'</b></span>':'')+'</div>';
   return h;
 }
 
@@ -1583,8 +1616,13 @@ function dibujarTipo(P){
   $('chartTipo').innerHTML=s;
 }
 
-function dibujarEstancia(filas){
+function dibujarEstancia(todas){
   const W=760,H=300,ml=52,mr=10,mt=12,mb=30;
+  const filas=[];
+  for(const r of todas){
+    if(r.tipoFila==='mes') filas.push({M:r.M,neto:r.neto,netoS:r.netoS});
+    else if(r.tipoFila!=='pend'&&filas.length){ const u=filas[filas.length-1]; u.neto+=r.neto; u.netoS+=r.netoS; }
+  }
   const n=Math.max(1,filas.length);
   const yMax=Math.max(...filas.map(F=>F.neto),...filas.map(F=>F.netoS),1)*1.08;
   const bw=(W-ml-mr)/n;
@@ -1870,20 +1908,25 @@ $('btnExcel').addEventListener('click',()=>{
   }else{
     const E=datosEstancia(P);
     if(E.err){ alert(E.err); return; }
-    const cal=[['Año','Mes','Situación','Días fuera','Días destino','Salario','Extras prorr.','Variable','Plus','Dieta','Devengado','Tipo IRPF','IRPF','SS','Líquido','Líquido si te quedas']];
+    const cal=[['Año','Mes','Concepto','Situación','Días fuera','Días destino','Salario','Plus','Dieta','Devengado','% IRPF','IRPF','% SS','SS','Líquido','Líquido si te quedas']];
+    const pc=(x,b)=>b>0?x/b:0;
     for(const a of E.anios){
       for(const F of a.filas){
         const M=F.M;
-        cal.push([M.y,MESES_L[M.m-1],M.D.sit,F.nat,M.D.dias,F.sal,F.ext,0,F.plus,F.dieta,F.dev,F.tipo,-F.irpf,-F.ss,F.neto,F.netoS]);
+        if(F.tipoFila==='mes')
+          cal.push([M.y,MESES_L[M.m-1],'Mensualidad',M.D.sit,F.nat,M.D.dias,F.sal,F.plus,F.dieta,F.dev,pc(F.irpf,F.suj),-F.irpf,pc(F.ss,F.suj),-F.ss,F.neto,F.netoS]);
+        else{
+          const et=F.tipoFila==='extra'?'Paga extra':F.tipoFila==='var'?'Variable':'Paga extra devengada ('+nfx.format(F.pct*100)+' %)';
+          cal.push([M.y,MESES_L[M.m-1],et,F.info||'','','',F.imp,0,0,F.imp,pc(F.irpf,F.imp),-F.irpf,pc(F.ss,F.imp),-F.ss,F.neto,F.netoS]);
+        }
       }
-      if(a.vr) cal.push([a.y,'','Variable (parte de los días fuera)','','',0,0,a.vr.v,0,0,a.vr.v,a.vr.tipo,-a.vr.irpf,-a.vr.ss,a.vr.neto,a.vr.netoS]);
-      if(a.comp>0) cal.push([a.y,'','Compensación IDOM','','',0,0,0,0,0,0,'',a.comp,0,a.comp,0]);
+      if(a.comp>0) cal.push([a.y,'','Compensación IDOM','','','',0,0,0,0,'',a.comp,'',0,a.comp,0]);
     }
-    XLSX.utils.book_append_sheet(wb,hoja(cal,[6,11,26,10,10,12,12,12,12,12,12,9,12,12,12,14],
-      (r,c)=>r===0?null:c===11?PCT:(c>=5?EUR:null)),'Estancia mes a mes');
+    XLSX.utils.book_append_sheet(wb,hoja(cal,[6,11,26,14,10,10,12,12,12,12,9,12,9,12,12,14],
+      (r,c)=>r===0?null:(c===10||c===12)?PCT:(c>=6?EUR:null)),'Estancia mes a mes');
     const T=E.T,B=E.B;
     const rows=[['Concepto','Estancia','Si te quedas','Diferencia']];
-    [['Salario (días fuera)',T.sal,B.sal],['Pagas extras prorrateadas',T.ext,B.ext],['Variable (parte)',T.variable,B.variable],
+    [['Salario (días fuera)',T.sal,B.sal],['Pagas extras',T.ext,B.ext],['Variable (febrero)',T.variable,B.variable],
      ['Plus',T.plus,0],['Dieta (exenta)',T.dieta,0],['Total devengado',T.dev,B.dev],['IRPF retenido',-T.irpf,-B.irpf],
      ['Compensación IDOM',T.comp,0],['Seguridad Social',-T.ss,-B.ss],['Líquido',T.neto,B.neto]]
       .forEach(([l,a,b])=>rows.push([l,a,b,a-b]));
