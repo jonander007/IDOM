@@ -549,6 +549,15 @@
         <div class="ancho"><table id="cmpTabla"></table></div>
         <div class="note" id="cmpNota"></div>
       </div>
+      <div class="panel" id="cmpMesesPanel" style="margin-top:18px">
+        <h2>Mes a mes <span class="tag" id="cmpMesesTag"></span></h2>
+        <div class="legend">
+          <span><span class="key bar" style="background:var(--teal)"></span>Líquido de A</span>
+          <span><span class="key bar" style="background:var(--gold)"></span>Líquido de B</span>
+        </div>
+        <svg id="chartCmp" viewBox="0 0 1200 280" role="img" aria-label="Líquido de cada mes en los escenarios A y B"></svg>
+        <div class="scrollx" style="margin-top:14px"><table class="cal" id="cmpMeses"></table></div>
+      </div>
     </div>
 
     <!-- ========== ESTANCIA ========== -->
@@ -1674,6 +1683,108 @@ function resumenEscenario(P,modo){
     periodo:'1 año',meses:12,sal:R.total,plus:0,dieta:0,dev:R.total,suj:R.total,
     irpf:R.irpf,comp:0,ss:R.ssAnual,neto:R.neto,gana:null,fuera:0,netoMes:R.netoMes,netoExtra:R.netoExtra};
 }
+/* Serie mensual de un escenario: {i: {dev, irpf, ss, neto, notas[]}} */
+function rangoNatural(P,modo){
+  if(modo==='estancia'){
+    const E=datosEstancia(P); if(E.err) return null;
+    const is=E.filas.map(f=>f.M.i); return {i0:Math.min(...is),i1:Math.max(...is)};
+  }
+  if(modo==='subidas'){
+    const yFin=Math.min(P.anio+9,Math.max(P.anio,...P.subidas.map(x=>Math.floor(x.i/12))));
+    return {i0:P.anio*12,i1:yFin*12+11};
+  }
+  return null;
+}
+function serieMensual(P,modo,rango){
+  const out={};
+  const nuevo=i=>out[i]||(out[i]={dev:0,irpf:0,ss:0,neto:0,notas:[]});
+  if(modo==='estancia'){
+    const E=datosEstancia(P); if(E.err) return out;
+    for(const a of E.anios){
+      let ult=null;
+      for(const F of a.filas){
+        const r=nuevo(F.M.i); ult=F.M.i;
+        if(F.tipoFila==='mes'){ r.dev+=F.dev; r.irpf+=F.irpf; r.ss+=F.ss; r.neto+=F.neto;
+          if(F.M.D.dias>0) r.notas.push('fuera'); }
+        else{ r.dev+=F.imp; r.irpf+=F.irpf; r.ss+=F.ss; r.neto+=F.neto;
+          r.notas.push(F.tipoFila==='extra'?'extra':F.tipoFila==='var'?'variable':'extra devengada'); }
+      }
+      if(a.comp>0&&ult!=null){ const r=nuevo(ult); r.neto+=a.comp; r.irpf-=a.comp; r.notas.push('compensación'); }
+    }
+    return out;
+  }
+  for(let y=Math.floor(rango.i0/12);y<=Math.floor(rango.i1/12);y++){
+    const A=simularAnio(P,y,false);
+    for(const M of A.meses){
+      if(M.i<rango.i0||M.i>rango.i1) continue;
+      const r=nuevo(M.i);
+      r.dev=M.brutoMes+(P.prorr?0:M.extra)+M.variable; r.irpf=M.irpf; r.ss=M.ss+M.ssVar; r.neto=M.neto;
+      if(!P.prorr&&M.extraInfo) r.notas.push('extra');
+      if(M.variable>0) r.notas.push('variable');
+      if(M.subida) r.notas.push('subida');
+    }
+  }
+  return out;
+}
+
+function pintarCmpMeses(){
+  const est={A:S.cmp.A,B:S.cmp.B};
+  const rangos=[];
+  for(const k of ['A','B']) rangos.push(conEstado(est[k].st,(P,m)=>rangoNatural(P,m)));
+  const val=rangos.filter(Boolean);
+  const hoyY=new Date().getFullYear();
+  const rango=val.length?{i0:Math.min(...val.map(r=>r.i0)),i1:Math.max(...val.map(r=>r.i1))}:{i0:hoyY*12,i1:hoyY*12+11};
+  const SA=conEstado(est.A.st,(P,m)=>serieMensual(P,m,rango));
+  const SB=conEstado(est.B.st,(P,m)=>serieMensual(P,m,rango));
+  const is=[...new Set([...Object.keys(SA),...Object.keys(SB)].map(Number))].sort((a,b)=>a-b);
+  $('cmpMesesTag').textContent=is.length?'· de '+MESES_L[is[0]%12]+' '+Math.floor(is[0]/12)+' a '+MESES_L[is[is.length-1]%12]+' '+Math.floor(is[is.length-1]/12):'';
+  const notas=r=>r&&r.notas.length?' <span class="tag">'+[...new Set(r.notas)].join(' · ')+'</span>':'';
+  const c=(r,k)=>r?eur(r[k]):'—';
+  let h='<thead><tr><th>Mes</th><th class="n sep">A · devengado</th><th class="n">A · líquido</th>'+
+    '<th class="n sep">B · devengado</th><th class="n">B · líquido</th><th class="n sep">Diferencia B − A</th><th class="n">Acumulado</th></tr></thead><tbody>';
+  let acum=0, yPrev=null;
+  const tot={A:{dev:0,neto:0},B:{dev:0,neto:0}};
+  const serie=[];
+  for(const i of is){
+    const y=Math.floor(i/12);
+    if(y!==yPrev){ h+=`<tr class="yrow"><td colspan="7">${y}</td></tr>`; yPrev=y; }
+    const a=SA[i], b=SB[i];
+    const d=(b?b.neto:0)-(a?a.neto:0); acum+=d;
+    if(a){tot.A.dev+=a.dev; tot.A.neto+=a.neto;} if(b){tot.B.dev+=b.dev; tot.B.neto+=b.neto;}
+    serie.push({i,a:a?a.neto:0,b:b?b.neto:0});
+    h+=`<tr><td>${MESES[i%12]}</td><td class="n sep">${c(a,'dev')}${notas(a)}</td><td class="n b">${c(a,'neto')}</td>`+
+      `<td class="n sep">${c(b,'dev')}${notas(b)}</td><td class="n b">${c(b,'neto')}</td>`+
+      `<td class="n sep ${d>0.004?'pos':d<-0.004?'warn':''}">${Math.abs(d)<0.005?'—':signo(d,eur)}</td>`+
+      `<td class="n ${acum>0.004?'pos':acum<-0.004?'warn':''}">${signo(acum,eur)}</td></tr>`;
+  }
+  h+=`</tbody><tfoot><tr><td>Total</td><td class="n sep">${eur(tot.A.dev)}</td><td class="n">${eur(tot.A.neto)}</td>`+
+    `<td class="n sep">${eur(tot.B.dev)}</td><td class="n">${eur(tot.B.neto)}</td><td class="n sep">${signo(tot.B.neto-tot.A.neto,eur)}</td><td></td></tr></tfoot>`;
+  $('cmpMeses').innerHTML=h;
+  dibujarCmp(serie);
+  S._cmpMeses={is,SA,SB};
+}
+
+function dibujarCmp(serie){
+  const W=1200,H=280,ml=52,mr=10,mt=12,mb=30;
+  const n=Math.max(1,serie.length);
+  const yMax=Math.max(1,...serie.map(p=>Math.max(p.a,p.b)))*1.08;
+  const bw=(W-ml-mr)/n, Y=v=>mt+(1-Math.max(0,v)/yMax)*(H-mt-mb);
+  let s='';
+  for(let k=0;k<=4;k++){
+    const val=yMax*k/4;
+    s+=`<line x1="${ml}" y1="${Y(val)}" x2="${W-mr}" y2="${Y(val)}" stroke="#D3DCE8"/>`;
+    s+=`<text x="${ml-8}" y="${Y(val)+4}" text-anchor="end" font-size="11" fill="#5B6B82">${nfx.format(Math.round(val/100)/10)}k</text>`;
+  }
+  const cada=Math.ceil(n/12);
+  serie.forEach((p,k)=>{
+    const x=ml+k*bw, w=Math.max(1,(bw-4)/2);
+    s+=`<rect x="${(x+2).toFixed(1)}" y="${Y(p.a).toFixed(1)}" width="${w.toFixed(1)}" height="${(H-mb-Y(p.a)).toFixed(1)}" fill="#0061A8"><title>${mesLabel(p.i)} · A: ${eur(p.a)}</title></rect>`;
+    s+=`<rect x="${(x+2+w).toFixed(1)}" y="${Y(p.b).toFixed(1)}" width="${w.toFixed(1)}" height="${(H-mb-Y(p.b)).toFixed(1)}" fill="#5B9BD5"><title>${mesLabel(p.i)} · B: ${eur(p.b)}</title></rect>`;
+    if(k%cada===0) s+=`<text x="${(x+bw/2).toFixed(1)}" y="${H-10}" text-anchor="middle" font-size="11" fill="#5B6B82">${MESES[p.i%12]}${p.i%12===0||k===0?' '+String(Math.floor(p.i/12)).slice(2):''}</text>`;
+  });
+  $('chartCmp').innerHTML=s;
+}
+
 function guardarComparador(){
   try{ localStorage.setItem('idom-comparador',JSON.stringify(S.cmp)); }catch(e){}
 }
@@ -1720,6 +1831,7 @@ function pintarComparador(){
       '<b>'+r.titulo+'</b><br>'+r.detalle+'<br>Periodo: '+r.periodo+' · '+r.irpfModo+(r.variable?' · variable '+eur0(r.variable):'');
   }
   const A=R.A,B=R.B, ok=A&&B&&!A.err&&!B.err;
+  $('cmpMesesPanel').style.display=ok?'':'none';
   if(!ok){
     $('cmpKpis').innerHTML=''; $('cmpTabla').innerHTML='';
     $('cmpNota').innerHTML='Carga los dos escenarios para compararlos.';
@@ -1762,6 +1874,7 @@ function pintarComparador(){
   $('cmpNota').innerHTML=(A.periodo!==B.periodo?'<b>Los periodos son distintos</b>: para comparar mejor, fíjate en el líquido medio al mes. ':'')+
     'Nómina y subidas se comparan con un año completo; la estancia, con su periodo. IRPF y SS llevan al lado el porcentaje sobre lo que tributa.';
   S._cmpR={A,B};
+  try{ pintarCmpMeses(); }catch(err){ $('cmpMeses').innerHTML='<tr><td>No se ha podido calcular mes a mes: '+err.message+'</td></tr>'; }
 }
 
 /* ============================================================
@@ -1847,6 +1960,17 @@ $('btnExcel').addEventListener('click',()=>{
     rows.push(['Líquido medio al mes',R.A.neto/R.A.meses,R.B.neto/R.B.meses,R.B.neto/R.B.meses-R.A.neto/R.A.meses]);
     const ws=XLSX.utils.aoa_to_sheet(rows); ws['!cols']=[{wch:24},{wch:30},{wch:30},{wch:16}];
     XLSX.utils.book_append_sheet(wb,ws,'Comparador');
+    const CM=S._cmpMeses;
+    if(CM){
+      const mm=[['Año','Mes','A devengado','A líquido','B devengado','B líquido','Diferencia B − A','Acumulado']];
+      let ac=0;
+      for(const i of CM.is){
+        const a=CM.SA[i], b=CM.SB[i], d=(b?b.neto:0)-(a?a.neto:0); ac+=d;
+        mm.push([Math.floor(i/12),MESES_L[i%12],a?a.dev:'',a?a.neto:'',b?b.dev:'',b?b.neto:'',d,ac]);
+      }
+      const w2=XLSX.utils.aoa_to_sheet(mm); w2['!cols']=[{wch:6},{wch:11}].concat(Array(6).fill({wch:15}));
+      XLSX.utils.book_append_sheet(wb,w2,'Mes a mes');
+    }
     XLSX.writeFile(wb,'Calculadora_IDOM_comparador_'+hoyISO()+'.xlsx');
     flash($('btnExcel'),'Descargado');
     return;
