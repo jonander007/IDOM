@@ -3,24 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nómina y estancias · IDOM Bizkaia 2026</title>
+<title>Calculadora de nóminas y desplazamientos · IDOM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
-    --paper:#E6EAE0;
-    --card:#FBFBF7;
-    --ink:#17201A;
-    --muted:#6A7970;
-    --line:#C8D0C2;
-    --line-soft:#E0E5DA;
-    --red:#A31E24;
-    --teal:#1E5148;
-    --gold:#8A6A28;
-    --tint:#EEF3EA;
-    --warn-bg:#F6E9E5;
+    /* paleta azul IDOM: cambia --teal para ajustar el azul corporativo */
+    --paper:#E8EEF5;
+    --card:#FBFCFE;
+    --ink:#0F1E33;
+    --muted:#5B6B82;
+    --line:#C5D1E0;
+    --line-soft:#DFE6EF;
+    --red:#B3261E;
+    --teal:#0061A8;
+    --gold:#5B9BD5;
+    --tint:#EAF2FB;
+    --warn-bg:#FBEAE8;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -35,7 +36,7 @@
   }
   .wrap{max-width:1240px;margin:0 auto;padding:32px 16px 64px}
 
-  header{border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:22px;
+  header{border-bottom:3px solid var(--teal);padding-bottom:14px;margin-bottom:22px;
     display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between}
   h1{font-size:26px;font-weight:600;letter-spacing:-.02em;margin:0 0 4px}
   header p{margin:0;color:var(--muted);max-width:70ch;font-size:14px}
@@ -59,6 +60,13 @@
   #eResumen td.n{padding-left:14px}
   #eAnios td:last-child{padding-right:0}
   table.cal td{white-space:nowrap}
+  body.m-comparador .grid{grid-template-columns:minmax(0,1fr)}
+  .cmp-slot .acciones{margin:4px 0 12px}
+  .cmp-slot .btn{font-size:12.5px;padding:6px 10px}
+  .cmp-info{font-size:13px;color:var(--muted)}
+  .cmp-info b{color:var(--ink)}
+  .cmp-vacio{padding:18px;border:1px dashed var(--line);color:var(--muted);font-size:13.5px;text-align:center}
+  #cmpTabla td.n{padding-left:14px}
   .dash-head{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;justify-content:space-between;margin-bottom:14px}
   .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line-soft);border:1px solid var(--line-soft)}
   @media (max-width:1100px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -71,7 +79,7 @@
   @media (max-width:500px){.kpi .v{font-size:26px}.kpi.main .v{font-size:32px}}
   table.cal tr.yrow td{background:var(--paper);font-weight:600;padding:8px 6px;white-space:normal}
   table.cal tr.ysub td{border-top:1px solid var(--ink);font-weight:600}
-  .pill.nores{color:var(--teal);background:#E3EEE9}
+  .pill.nores{color:var(--teal);background:#E2EEF9}
   .pill.res{color:var(--muted)}
 
   .panel{background:var(--card);border:1px solid var(--line);padding:20px}
@@ -101,7 +109,8 @@
   }
   .seg button:last-child{border-right:0}
   .seg button[aria-pressed=true]{background:var(--ink);color:#fff;font-weight:600}
-  .modos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:22px}
+  .modos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:22px}
+  @media (max-width:1000px){.modos{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media (max-width:700px){.modos{grid-template-columns:1fr}}
   .modos button{font:inherit;text-align:left;cursor:pointer;background:var(--card);color:var(--ink);
     border:1px solid var(--line);border-top:4px solid var(--line);padding:12px 14px;border-radius:2px}
@@ -201,11 +210,15 @@
   .key.bar{height:10px;width:10px}
   svg{display:block;width:100%;height:auto}
 
-  .aviso{padding:16px;background:var(--warn-bg);border:1px solid #E3C7BF;color:var(--red);font-size:14px}
+  .aviso{padding:16px;background:var(--warn-bg);border:1px solid #EBC4C0;color:var(--red);font-size:14px}
 
   body:not(.m-desglose) .solo-desglose,
   body:not(.m-subidas) .solo-subidas,
   body:not(.m-estancia) .solo-estancia,
+  body:not(.m-comparador) .solo-comparador,
+  body.m-comparador .no-estancia,
+  body.m-comparador #form,
+  body:not(.per-custom) .solo-custom,
   body.m-desglose .no-desglose,
   body.m-estancia .no-estancia,
   body.p12 .solo-14,
@@ -221,8 +234,8 @@
 
 <header>
   <div>
-    <h1>Nómina y estancias · Bizkaia 2026</h1>
-    <p>Una sola calculadora para la nómina de siempre y para los desplazamientos: subidas encadenadas, pagas extras separadas de las mensualidades y la estancia contada desde el día que te vas.</p>
+    <h1>Calculadora de nóminas y desplazamientos de IDOM <span class="tag" style="font-size:15px;font-weight:400">· Bizkaia 2026</span></h1>
+    <p>Nómina, subidas de sueldo y estancias en el extranjero en un solo sitio, con un comparador para poner dos escenarios lado a lado.</p>
   </div>
   <div class="acciones">
     <button class="btn" type="button" id="btnGuardar">Guardar JSON</button>
@@ -236,6 +249,7 @@
   <button type="button" data-v="desglose" aria-pressed="true"><b>Desglosar nómina</b><span>Tu nómina de un mes y de un año, línea a línea</span></button>
   <button type="button" data-v="subidas" aria-pressed="false"><b>Subidas de sueldo</b><span>Aplica subidas en cadena y mira cómo quedan mensualidades y extras</span></button>
   <button type="button" data-v="estancia" aria-pressed="false"><b>Calcular estancia</b><span>Desplazamiento desde el día que te vas, con plus y dietas</span></button>
+  <button type="button" data-v="comparador" aria-pressed="false"><b>Comparador</b><span>Carga dos JSON guardados y compáralos lado a lado</span></button>
 </nav>
 
 <div class="grid">
@@ -309,7 +323,19 @@
           <div><label class="lab" for="salida">Día de salida</label><input type="date" id="salida" value="2026-10-15"></div>
           <div><label class="lab" for="regreso">Día de regreso</label><input type="date" id="regreso" value="2027-12-20"></div>
         </div>
-        <div class="hint">El resto del año cobras el sueldo de origen. El mes de salida y el de regreso cuentan solo los días fuera.</div>
+        <div class="hint">El resto del año cobras el sueldo de origen.</div>
+      </div>
+      <div class="field">
+        <label class="lab">Periodo a calcular</label>
+        <div class="seg" id="segPeriodo">
+          <button type="button" data-v="estancia" aria-pressed="true">Solo la estancia</button>
+          <button type="button" data-v="custom" aria-pressed="false">Otro periodo</button>
+        </div>
+        <div class="row2 solo-custom" style="margin-top:8px">
+          <div><input type="month" id="calcDesde" value="2026-01" aria-label="Calcular desde" placeholder="AAAA-MM"><div class="hint">Desde</div></div>
+          <div><input type="month" id="calcHasta" value="2027-12" aria-label="Calcular hasta" placeholder="AAAA-MM"><div class="hint">Hasta</div></div>
+        </div>
+        <div class="hint solo-custom">Meses completos. Los que caen fuera de la estancia van con el sueldo español; por ejemplo, de enero a octubre aunque vuelvas en julio.</div>
       </div>
       <div class="field">
         <label class="lab" for="diasDef">Días en destino en un mes completo</label>
@@ -493,6 +519,37 @@
       </div>
     </div>
 
+    <!-- ========== COMPARADOR ========== -->
+    <div class="solo-comparador">
+      <div class="dos" style="margin-top:0">
+        <div class="panel cmp-slot" style="margin-top:0">
+          <h2>Escenario A <span class="tag" id="cmpNomA"></span></h2>
+          <div class="acciones">
+            <button class="btn" type="button" data-acc="cargar" data-s="A">Cargar JSON</button>
+            <button class="btn" type="button" data-acc="actual" data-s="A">Usar lo que tengo en pantalla</button>
+            <button class="btn" type="button" data-acc="quitar" data-s="A">Quitar</button>
+          </div>
+          <div class="cmp-info" id="cmpInfoA"></div>
+        </div>
+        <div class="panel cmp-slot" style="margin-top:0">
+          <h2>Escenario B <span class="tag" id="cmpNomB"></span></h2>
+          <div class="acciones">
+            <button class="btn" type="button" data-acc="cargar" data-s="B">Cargar JSON</button>
+            <button class="btn" type="button" data-acc="actual" data-s="B">Usar lo que tengo en pantalla</button>
+            <button class="btn" type="button" data-acc="quitar" data-s="B">Quitar</button>
+          </div>
+          <div class="cmp-info" id="cmpInfoB"></div>
+        </div>
+      </div>
+      <input type="file" id="cmpFichero" accept=".json,application/json" hidden>
+      <div class="panel" style="margin-top:18px">
+        <h2>Comparación</h2>
+        <div class="kpis" id="cmpKpis" style="margin-bottom:16px"></div>
+        <div class="ancho"><table id="cmpTabla"></table></div>
+        <div class="note" id="cmpNota"></div>
+      </div>
+    </div>
+
     <!-- ========== ESTANCIA ========== -->
     <div class="solo-estancia">
       <div id="eAviso"></div>
@@ -673,7 +730,7 @@ function retencionAnual(b,P,modo){
    ESTADO Y LECTURA
    ============================================================ */
 const $=id=>document.getElementById(id);
-const S={mode:'desglose',modoImporte:'anual',pagas:14,cobroExtra:'aparte',irpf:'tabla',
+const S={mode:'desglose',ultimo:'desglose',periodo:'estancia',cmp:{A:null,B:null},modoImporte:'anual',pagas:14,cobroExtra:'aparte',irpf:'tabla',
          subidas:[{pct:3,desde:'2027-01'}],overrides:{}};
 const num=id=>{const v=parseFloat($(id).value);return isFinite(v)?v:0;};
 
@@ -906,7 +963,7 @@ function seg(idBox,key,cast){
   });
 }
 function syncSegs(){
-  const map={segModo:'mode',segImporte:'modoImporte',segPagas:'pagas',segCobro:'cobroExtra',segIrpf:'irpf'};
+  const map={segModo:'mode',segImporte:'modoImporte',segPagas:'pagas',segCobro:'cobroExtra',segIrpf:'irpf',segPeriodo:'periodo'};
   for(const [box,key] of Object.entries(map))
     $(box).querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.v===String(S[key]))));
 }
@@ -957,7 +1014,9 @@ $('quickSub').addEventListener('click',e=>{
 function calc(){
   const P=leer();
   const body=document.body;
-  ['desglose','subidas','estancia'].forEach(m=>body.classList.toggle('m-'+m,S.mode===m));
+  if(S.mode!=='comparador') S.ultimo=S.mode;
+  ['desglose','subidas','estancia','comparador'].forEach(m=>body.classList.toggle('m-'+m,S.mode===m));
+  body.classList.toggle('per-custom',S.periodo==='custom');
   body.classList.toggle('p12',S.pagas===12);
   ['tabla','prog','manual','zero'].forEach(m=>body.classList.toggle('irpf-'+m,S.irpf===m));
 
@@ -979,7 +1038,8 @@ function calc(){
     :'';
 
   guardarLocal();
-  if(S.mode==='estancia') pintarEstancia(P); else pintarNomina(P);
+  if(S.mode==='comparador') pintarComparador();
+  else if(S.mode==='estancia') pintarEstancia(P); else pintarNomina(P);
 }
 
 /* ---------------- NÓMINA ---------------- */
@@ -1154,11 +1214,15 @@ function pintarLineas(P,R,aparte){
    días naturales fuera, plus y dietas enteros. El tipo de IRPF sale del año completo. */
 function porcionEstancia(con,sin,P){
   const filas=[];
-  const T={sal:0,ext:0,variable:0,plus:0,dieta:0,irpf:0,ss:0,neto:0,fuera:0,dias:0,comp:0};
+  const T={sal:0,ext:0,variable:0,plus:0,dieta:0,irpf:0,ss:0,neto:0,fuera:0,dias:0,comp:0,periodo:0};
   const B={sal:0,ext:0,variable:0,irpf:0,ss:0,neto:0};
+  const ea=diaNum(P.salida.y,P.salida.m,P.salida.d), eb=diaNum(P.regreso.y,P.regreso.m,P.regreso.d);
+  const solape=(a0,a1,b0,b1)=>Math.max(0,Math.min(a1,b1)-Math.max(a0,b0)+1);
   con.meses.forEach((M,k)=>{
-    const D=M.D; if(D.sit==='antes'||D.sit==='despues')return;
-    const Ms=sin.meses[k], dim=diasMes(M.y,M.m), nat=D.d1-D.d0+1, f=nat/dim;
+    const dim=diasMes(M.y,M.m), m0=diaNum(M.y,M.m,1), m1=diaNum(M.y,M.m,dim);
+    const enPer=solape(m0,m1,P.per.a,P.per.b); if(!enPer)return;
+    const D=M.D, Ms=sin.meses[k], f=enPer/dim;
+    const nat=solape(Math.max(m0,P.per.a),Math.min(m1,P.per.b),ea,eb);
     const acr=P.pagas===14?M.salMes/largoPeriodo(P,M.m):0;
     const acrS=P.pagas===14?Ms.salMes/largoPeriodo(P,M.m):0;
     const sal=M.salMes*f, ext=acr*f, suj=sal+ext+M.plus;
@@ -1166,14 +1230,15 @@ function porcionEstancia(con,sin,P){
     const neto=suj+M.dieta-irpf-ss;
     const salS=Ms.salMes*f, extS=acrS*f, irpfS=Ms.tipo*(salS+extS), ssS=Ms.ss*f;
     const netoS=salS+extS-irpfS-ssS;
-    filas.push({M,nat,f,sal,ext,plus:M.plus,dieta:M.dieta,dev:suj+M.dieta,tipo:M.tipo,irpf,ss,neto,netoS});
+    filas.push({M,nat,f,enPer,sal,ext,plus:M.plus,dieta:M.dieta,suj,dev:suj+M.dieta,tipo:M.tipo,irpf,ss,neto,netoS});
     T.sal+=sal; T.ext+=ext; T.plus+=M.plus; T.dieta+=M.dieta; T.irpf+=irpf; T.ss+=ss; T.neto+=neto;
-    T.fuera+=nat; T.dias+=D.dias;
+    T.fuera+=nat; T.dias+=D.dias; T.periodo+=enPer;
     B.sal+=salS; B.ext+=extS; B.irpf+=irpfS; B.ss+=ssS; B.neto+=netoS;
   });
   let vr=null;
   if(P.variable>0&&filas.length){
-    const ra=con.res.fuera/(con.res.fuera+con.res.espana);
+    const diasAnio=con.res.fuera+con.res.espana;
+    const ra=T.periodo/diasAnio;
     const F=con.meses[1], Fs=sin.meses[1], v=P.variable*ra;
     vr={v,ra,tipo:F.tipo,irpf:F.tipo*v,ss:F.ssVar*ra};
     vr.neto=v-vr.irpf-vr.ss;
@@ -1186,13 +1251,31 @@ function porcionEstancia(con,sin,P){
   return {y:con.y,res:con.res,con,sin,filas,vr,comp,T,B};
 }
 
+/* Periodo a calcular: la estancia o los meses que elijas */
+function periodoCalculo(P){
+  if(S.periodo==='custom'){
+    const a=parseYM($('calcDesde').value), b=parseYM($('calcHasta').value);
+    if(!isFinite(a)||!isFinite(b)) return {err:'Indica el mes de inicio y el de fin del periodo a calcular.'};
+    if(b<a) return {err:'El periodo a calcular termina antes de empezar.'};
+    const ya=Math.floor(a/12), ma=a%12+1, yb=Math.floor(b/12), mb=b%12+1;
+    return {a:diaNum(ya,ma,1),b:diaNum(yb,mb,diasMes(yb,mb)),ya,yb,
+            txt:MESES_L[ma-1]+' '+ya+' a '+MESES_L[mb-1]+' '+yb};
+  }
+  const s=P.salida, r=P.regreso;
+  return {a:diaNum(s.y,s.m,s.d),b:diaNum(r.y,r.m,r.d),ya:s.y,yb:r.y,
+          txt:s.d+' '+MESES[s.m-1]+' '+s.y+' al '+r.d+' '+MESES[r.m-1]+' '+r.y};
+}
+
 function datosEstancia(P){
   const s=P.salida, r=P.regreso;
   if(!s||!r) return {err:'Indica el día de salida y el de regreso.'};
   if(r.i*100+r.d<s.i*100+s.d) return {err:'El regreso no puede ser anterior a la salida.'};
-  if(r.y-s.y>9) return {err:'La estancia no puede pasar de 10 años naturales.'};
+  const per=periodoCalculo(P);
+  if(per.err) return per;
+  if(per.yb-per.ya>9) return {err:'El periodo a calcular no puede pasar de 10 años naturales.'};
+  P.per=per;
   const anios=[];
-  for(let y=s.y;y<=r.y;y++){
+  for(let y=per.ya;y<=per.yb;y++){
     const sin=simularAnio(P,y,false);
     anios.push(porcionEstancia(aplicarTope(simularAnio(P,y,true),sin,P),sin,P));
   }
@@ -1203,7 +1286,8 @@ function datosEstancia(P){
   }
   T.suj=T.sal+T.ext+T.variable+T.plus; T.dev=T.suj+T.dieta;
   B.suj=B.sal+B.ext+B.variable; B.dev=B.suj;
-  return {anios,T,B,filas:anios.flatMap(a=>a.filas)};
+  T.meses=T.periodo/(365.25/12);
+  return {anios,T,B,per,filas:anios.flatMap(a=>a.filas)};
 }
 
 function pintarEstancia(P){
@@ -1220,7 +1304,8 @@ function pintarEstancia(P){
   const medio=completos.length?completos.reduce((a,f)=>a+f.neto,0)/completos.length:(T.fuera?T.neto/T.fuera*30.44:0);
   const irpfPaga=T.irpf-T.comp;
   const noRes=E.anios.filter(a=>a.res.noRes).map(a=>a.y);
-  $('eDashTag').textContent='· del '+fecha(s)+' al '+fecha(r);
+  $('eDashTag').textContent='· estancia del '+fecha(s)+' al '+fecha(r)+
+    (S.periodo==='custom'?' · calculando de '+E.per.txt:'');
   $('eCfg').innerHTML=[
     '<b>'+P.origen+' → '+P.destino+(P.nuclear?' (nuclear)':'')+'</b>',
     'Dieta <b>'+eur(P.dietaDia)+'</b>/día',
@@ -1228,35 +1313,38 @@ function pintarEstancia(P){
   ].map(x=>'<span>'+x+'</span>').join('');
   const kpi=(v,l,sub,cl)=>`<div class="kpi ${cl||''}"><div class="v">${v}</div><div class="l">${l}</div>${sub?`<div class="s">${sub}</div>`:''}</div>`;
   $('eKpis').innerHTML=
-    kpi(eur0(T.neto),'líquido de la estancia','incluye '+eur0(T.dieta)+' de dietas'+(T.comp>0?' y '+eur0(T.comp)+' de compensación':''),'main')+
+    kpi(eur0(T.neto),S.periodo==='custom'?'líquido del periodo calculado':'líquido de la estancia','incluye '+eur0(T.dieta)+' de dietas'+(T.comp>0?' y '+eur0(T.comp)+' de compensación':''),'main')+
     kpi(eur0(medio),completos.length?'líquido medio de un mes completo fuera':'líquido por cada 30 días fuera','frente a '+
       eur0(completos.length?completos.reduce((a,f)=>a+f.netoS,0)/completos.length:(T.fuera?B.neto/T.fuera*30.44:0))+' si te quedas')+
     kpi(signo(T.neto-B.neto,eur0),'más que quedándote los mismos días','plus, dietas e IRPF','pos')+
-    kpi(nf0.format(T.fuera),'días naturales fuera',nf0.format(T.dias)+' días en destino para plus y dietas')+
-    kpi(eur0(T.sal+T.ext+T.variable),'salario de la estancia','base '+eur0(T.sal)+' · extras '+eur0(T.ext)+(T.variable?' · variable '+eur0(T.variable):''))+
+    kpi(nf0.format(T.fuera),'días naturales fuera',(S.periodo==='custom'?'de '+nf0.format(T.periodo)+' días calculados · ':'')+nf0.format(T.dias)+' en destino para plus y dietas')+
+    kpi(eur0(T.sal+T.ext+T.variable),S.periodo==='custom'?'salario del periodo':'salario de la estancia','base '+eur0(T.sal)+' · extras '+eur0(T.ext)+(T.variable?' · variable '+eur0(T.variable):''))+
     kpi(eur0(T.plus+T.dieta),'plus y dietas','plus '+eur0(T.plus)+' · dietas exentas '+eur0(T.dieta))+
     kpi(eur0(irpfPaga),'IRPF que pagas',(T.suj>0?pct(irpfPaga/T.suj*100)+' de lo que tributa':'')+
       (noRes.length?' · sin IRPF en '+noRes.join(', '):''))+
     kpi(eur0(T.ss),'Seguridad Social',pct(P.tSS*100)+' sobre la base de cotización');
 
   /* desglose */
-  $('eResTag').textContent='· '+nf0.format(T.fuera)+' días fuera';
+  $('eResTag').textContent=S.periodo==='custom'?'· '+E.per.txt+', '+nf0.format(T.fuera)+' días fuera':'· '+nf0.format(T.fuera)+' días fuera';
   const fila=(et,a,b,cl,neg)=>`<tr class="${cl||''}"><td>${et}</td><td class="n">${neg&&a>0.004?'−':''}${eur(a)}</td><td class="n">${neg&&b>0.004?'−':''}${eur(b)}</td>
     <td class="n ${!neg&&a-b>0.004?'pos':''}">${Math.abs(a-b)<0.005?'—':(neg?signo(-(a-b),eur):signo(a-b,eur))}</td></tr>`;
-  let h='<tr class="th"><td></td><td class="n">Estancia</td><td class="n">Si te quedas</td><td class="n">Diferencia</td></tr>';
-  h+=fila('Salario <span class="tag">días fuera</span>',T.sal,B.sal);
-  if(P.pagas===14) h+=fila('Pagas extras <span class="tag">prorrateadas a los días fuera</span>',T.ext,B.ext);
-  if(P.variable>0) h+=fila('Variable <span class="tag">parte de los días fuera</span>',T.variable,B.variable);
+  const cust=S.periodo==='custom';
+  let h='<tr class="th"><td></td><td class="n">'+(cust?'Periodo':'Estancia')+'</td><td class="n">Si te quedas</td><td class="n">Diferencia</td></tr>';
+  h+=fila('Salario <span class="tag">'+(cust?'días del periodo':'días fuera')+'</span>',T.sal,B.sal);
+  if(P.pagas===14) h+=fila('Pagas extras <span class="tag">prorrateadas a los días '+(cust?'del periodo':'fuera')+'</span>',T.ext,B.ext);
+  if(P.variable>0) h+=fila('Variable <span class="tag">parte de los días '+(cust?'del periodo':'fuera')+'</span>',T.variable,B.variable);
   h+=fila('Plus de desplazamiento',T.plus,0);
   h+=fila('Dieta de manutención <span class="tag">exenta</span>',T.dieta,0);
   h+=fila('Total devengado',T.dev,B.dev,'total');
-  h+=fila('IRPF retenido',T.irpf,B.irpf,'neg',true);
+  h+=fila('IRPF retenido <span class="tag">'+(T.suj>0?pct(T.irpf/T.suj*100):'')+' → '+(B.suj>0?pct(B.irpf/B.suj*100):'')+'</span>',T.irpf,B.irpf,'neg',true);
   if(P.tope) h+=fila('Compensación IDOM <span class="tag">tope España</span>',T.comp,0);
-  h+=fila('Seguridad Social',T.ss,B.ss,'neg',true);
+  h+=fila('Seguridad Social <span class="tag">'+(T.suj>0?pct(T.ss/T.suj*100):'')+' → '+(B.suj>0?pct(B.ss/B.suj*100):'')+'</span>',T.ss,B.ss,'neg',true);
   h+=fila('Líquido',T.neto,B.neto,'total');
   $('eResumen').innerHTML=h;
-  $('eResNota').innerHTML='Solo cuenta el periodo de la estancia: el salario de los meses de salida y regreso y las pagas extras van en proporción a los días naturales fuera'+
-    (P.variable>0?'; el variable, en proporción a los días fuera de cada año':'')+
+  $('eResNota').innerHTML=(cust
+      ?'Se calcula de '+E.per.txt+': los meses sin desplazamiento llevan el sueldo español, y las pagas extras van en proporción a los días del periodo'
+      :'Solo cuenta el periodo de la estancia: el salario de los meses de salida y regreso y las pagas extras van en proporción a los días naturales fuera')+
+    (P.variable>0?'; el variable, en proporción a los días '+(cust?'del periodo':'fuera')+' de cada año':'')+
     '. El tipo de IRPF se calcula con todo lo que cobras en el año, estancia incluida, y las dietas no cuentan.';
 
   /* residencia fiscal por año */
@@ -1283,44 +1371,48 @@ function pintarEstancia(P){
   dibujarEstancia(E.filas);
 }
 
+/* celda de retención: porcentaje que se quita, con el importe al pasar el ratón */
+function celPct(imp,base){
+  return `<td class="n neg" title="${imp>0.004?'−'+eur(imp):''}">${imp>0.004&&base>0?pct(imp/base*100):'—'}</td>`;
+}
+
 function tablaEstancia(E,P){
-  const nc=13;
+  const nc=12;
   let h='<div class="scrollx"><table class="cal"><thead><tr><th>Mes</th><th>Situación</th><th class="n">Días fuera</th><th class="n">Días destino</th>'+
     '<th class="n">Salario</th><th class="n">Extras prorr.</th><th class="n">Plus</th><th class="n">Dieta</th><th class="n">Devengado</th>'+
-    '<th class="n">Tipo IRPF</th><th class="n">IRPF</th><th class="n">SS</th><th class="n">Líquido</th></tr></thead><tbody>';
-  const tot=t=>`<td class="n">${eur(t.sal)}</td><td class="n">${eur(t.ext)}</td><td class="n">${eur(t.plus)}</td><td class="n">${eur(t.dieta)}</td>`;
+    '<th class="n">IRPF</th><th class="n">SS</th><th class="n">Líquido</th></tr></thead><tbody>';
   for(const a of E.anios){
     const R=a.res;
     h+=`<tr class="yrow"><td colspan="${nc}">${a.y} <span class="tag">· ${R.fuera} días fuera, ${R.espana} en España</span> `+
       (R.noRes?'<span class="pill nores">Menos de 183 días fuera · sin IRPF</span>':'<span class="pill res">183 días o más fuera · tributa</span>')+'</td></tr>';
     for(const F of a.filas){
       const M=F.M, D=M.D;
-      const sit={destino:'En destino',salida:'Sale el '+D.d0,regreso:'Vuelve el '+D.d1,'ida-vuelta':'Del '+D.d0+' al '+D.d1}[D.sit];
+      const enEsp=D.sit==='antes'||D.sit==='despues';
+      const sit=enEsp?'En España':{destino:'En destino',salida:'Sale el '+D.d0,regreso:'Vuelve el '+D.d1,'ida-vuelta':'Del '+D.d0+' al '+D.d1}[D.sit];
       const sub=M.subida?` <span class="pill up">${signo(M.subida.pct,milar)} %</span>`:'';
-      h+=`<tr class="${D.ov?'ov':''}"><td>${MESES[M.m-1]}</td><td>${sit}</td><td class="n">${F.nat}</td>`+
-        `<td class="n"><input type="number" class="dias" data-k="${ymKey(M.i)}" value="${D.dias}" min="0" max="31" aria-label="Días en destino en ${MESES_L[M.m-1]} ${M.y}"></td>`+
+      h+=`<tr class="${D.ov?'ov':''} ${enEsp?'fuera':''}"><td>${MESES[M.m-1]}</td><td>${sit}</td><td class="n">${F.nat||'—'}</td>`+
+        `<td class="n">${enEsp?'—':`<input type="number" class="dias" data-k="${ymKey(M.i)}" value="${D.dias}" min="0" max="31" aria-label="Días en destino en ${MESES_L[M.m-1]} ${M.y}">`}</td>`+
         `<td class="n">${eur(F.sal)}${sub}</td><td class="n">${eur(F.ext)}</td><td class="n">${F.plus?eur(F.plus):'—'}</td><td class="n">${F.dieta?eur(F.dieta):'—'}</td>`+
-        `<td class="n">${eur(F.dev)}</td><td class="n">${pct(F.tipo*100)}</td><td class="n neg">${menos(F.irpf)}</td>`+
-        `<td class="n neg">${menos(F.ss)}</td><td class="n b">${eur(F.neto)}</td></tr>`;
+        `<td class="n">${eur(F.dev)}</td>${celPct(F.irpf,F.suj)}${celPct(F.ss,F.suj)}<td class="n b">${eur(F.neto)}</td></tr>`;
     }
     if(a.vr){
-      h+=`<tr class="extra"><td colspan="4">Variable <span class="tag">${nfx.format(a.vr.ra*100)} % del año fuera</span></td>`+
+      h+=`<tr class="extra"><td colspan="4">Variable <span class="tag">${nfx.format(a.vr.ra*100)} % del año</span></td>`+
         `<td class="n">${eur(a.vr.v)}</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">${eur(a.vr.v)}</td>`+
-        `<td class="n">${pct(a.vr.tipo*100)}</td><td class="n neg">${menos(a.vr.irpf)}</td><td class="n neg">${menos(a.vr.ss)}</td><td class="n b">${eur(a.vr.neto)}</td></tr>`;
+        `${celPct(a.vr.irpf,a.vr.v)}${celPct(a.vr.ss,a.vr.v)}<td class="n b">${eur(a.vr.neto)}</td></tr>`;
     }
     if(a.comp>0){
-      h+=`<tr class="extra"><td colspan="10">Compensación IDOM <span class="tag">tope de IRPF de España</span></td>`+
+      h+=`<tr class="extra"><td colspan="9">Compensación IDOM <span class="tag">tope de IRPF de España</span></td>`+
         `<td class="n pos">+${eur(a.comp)}</td><td></td><td class="n b">+${eur(a.comp)}</td></tr>`;
     }
     const t=a.T;
     h+=`<tr class="ysub"><td colspan="2">Total ${a.y}</td><td class="n">${t.fuera}</td><td class="n">${t.dias}</td>`+
       `<td class="n">${eur(t.sal+t.variable)}</td><td class="n">${eur(t.ext)}</td><td class="n">${eur(t.plus)}</td><td class="n">${eur(t.dieta)}</td>`+
-      `<td class="n">${eur(t.sal+t.ext+t.variable+t.plus+t.dieta)}</td><td></td><td class="n">${menos(t.irpf-t.comp)}</td><td class="n">${menos(t.ss)}</td><td class="n">${eur(t.neto)}</td></tr>`;
+      `<td class="n">${eur(t.sal+t.ext+t.variable+t.plus+t.dieta)}</td><td class="n">${menos(t.irpf-t.comp)}</td><td class="n">${menos(t.ss)}</td><td class="n">${eur(t.neto)}</td></tr>`;
   }
   const T=E.T;
-  h+=`</tbody><tfoot><tr><td colspan="2">Total estancia</td><td class="n">${nf0.format(T.fuera)}</td><td class="n">${nf0.format(T.dias)}</td>`+
+  h+=`</tbody><tfoot><tr><td colspan="2">Total ${S.periodo==='custom'?'del periodo':'estancia'}</td><td class="n">${nf0.format(T.fuera)}</td><td class="n">${nf0.format(T.dias)}</td>`+
     `<td class="n">${eur(T.sal+T.variable)}</td><td class="n">${eur(T.ext)}</td><td class="n">${eur(T.plus)}</td><td class="n">${eur(T.dieta)}</td>`+
-    `<td class="n">${eur(T.dev)}</td><td class="n">${T.suj>0?pct((T.irpf-T.comp)/T.suj*100):'—'}</td><td class="n">${menos(T.irpf-T.comp)}</td><td class="n">${menos(T.ss)}</td><td class="n">${eur(T.neto)}</td></tr></tfoot></table></div>`;
+    `<td class="n">${eur(T.dev)}</td><td class="n">${menos(T.irpf-T.comp)}</td><td class="n">${menos(T.ss)}</td><td class="n">${eur(T.neto)}</td></tr></tfoot></table></div>`;
   return h;
 }
 
@@ -1338,8 +1430,9 @@ function tablaAnio(A,P,est,soloAnio,sin){
     (est?'<th>Situación</th><th class="n">Días</th>':'')+
     '<th class="n">Salario</th>'+(P.prorr?'<th class="n">Extra prorr.</th>':'')+
     (est?'<th class="n">Plus</th><th class="n">Dieta</th>':'')+
-    '<th class="n">Devengado</th><th class="n">Tipo IRPF</th><th class="n">IRPF</th><th class="n">SS</th><th class="n">Líquido</th></tr></thead><tbody>';
+    '<th class="n">Devengado</th><th class="n">IRPF</th><th class="n">SS</th><th class="n">Líquido</th></tr></thead><tbody>';
   for(const M of A.meses){
+    const baseMes=M.salMes+M.plus+(P.prorr?M.extra:0);
     const D=M.D;
     const fuera=est&&(D.sit==='antes'||D.sit==='despues');
     let sitTxt='', diasTxt='';
@@ -1354,24 +1447,21 @@ function tablaAnio(A,P,est,soloAnio,sin){
       `<td class="n">${eur(M.salMes)}${sub}</td>`+
       (P.prorr?`<td class="n">${eur(M.extra)}</td>`:'')+
       (est?`<td class="n">${M.plus?eur(M.plus):'—'}</td><td class="n">${M.dieta?eur(M.dieta):'—'}</td>`:'')+
-      `<td class="n">${eur(M.brutoMes)}</td><td class="n">${pct(M.tipo*100)}</td>`+
-      `<td class="n neg">${menos(M.irpfMes)}</td><td class="n neg">−${eur(M.ss)}</td><td class="n b">${eur(M.netoMes)}</td></tr>`;
+      `<td class="n">${eur(M.brutoMes)}</td>${celPct(M.irpfMes,baseMes)}${celPct(M.ss,baseMes)}<td class="n b">${eur(M.netoMes)}</td></tr>`;
     if(aparte&&M.extraInfo){
       h+=`<tr class="extra"><td colspan="${est?3:1}">Paga extra <span class="tag">${M.extraInfo}</span></td>`+
         `<td class="n">${eur(M.extra)}</td>`+(est?'<td class="n">—</td><td class="n">—</td>':'')+
-        `<td class="n">${eur(M.extra)}</td><td class="n">${pct(M.tipo*100)}</td>`+
-        `<td class="n neg">${menos(M.irpfExtra)}</td><td class="n">—</td><td class="n b">${eur(M.netoExtra)}</td></tr>`;
+        `<td class="n">${eur(M.extra)}</td>${celPct(M.irpfExtra,M.extra)}<td class="n">—</td><td class="n b">${eur(M.netoExtra)}</td></tr>`;
     }
     if(M.variable>0){
       h+=`<tr class="extra"><td colspan="${est?3:1}">Variable <span class="tag">íntegro en febrero</span></td>`+
         `<td class="n">${eur(M.variable)}</td>`+(P.prorr?'<td class="n">—</td>':'')+(est?'<td class="n">—</td><td class="n">—</td>':'')+
-        `<td class="n">${eur(M.variable)}</td><td class="n">${pct(M.tipo*100)}</td>`+
-        `<td class="n neg">${menos(M.irpfVar)}</td><td class="n neg">${M.ssVar>0?'−'+eur(M.ssVar):'—'}</td><td class="n b">${eur(M.netoVar)}</td></tr>`;
+        `<td class="n">${eur(M.variable)}</td>${celPct(M.irpfVar,M.variable)}${celPct(M.ssVar,M.variable)}<td class="n b">${eur(M.netoVar)}</td></tr>`;
     }
   }
   if(A.comp>0){
     const span=(est?3:1);
-    const antes=1+(P.prorr?1:0)+(est?2:0)+1+1;
+    const antes=1+(P.prorr?1:0)+(est?2:0)+1;
     h+=`<tr class="extra"><td colspan="${span}">Compensación IDOM <span class="tag">tope de IRPF de España</span></td>`+
       `<td colspan="${antes}"></td><td class="n pos">+${eur(A.comp)}</td><td></td><td class="n b">+${eur(A.comp)}</td></tr>`;
   }
@@ -1379,8 +1469,8 @@ function tablaAnio(A,P,est,soloAnio,sin){
     (est?`<td class="n">${nf0.format(T.dias)}</td>`:'')+
     `<td class="n">${eur(T.sal+(aparte?T.extra:0)+T.variable)}</td>`+(P.prorr?`<td class="n">${eur(T.extra)}</td>`:'')+
     (est?`<td class="n">${eur(T.plus)}</td><td class="n">${eur(T.dieta)}</td>`:'')+
-    `<td class="n">${eur(T.dev)}</td><td class="n">${pct(T.tipoEf*100)}</td>`+
-    `<td class="n">${menos(T.irpf-(A.comp||0))}</td><td class="n">−${eur(T.ss)}</td><td class="n">${eur(T.neto)}</td></tr></tfoot></table></div>`;
+    `<td class="n">${eur(T.dev)}</td>`+
+    `<td class="n">${menos(T.irpf-(A.comp||0))}</td><td class="n">${menos(T.ss)}</td><td class="n">${eur(T.neto)}</td></tr></tfoot></table></div>`;
 
   const partes=[];
   partes.push('Mensualidades: bruto <b>'+eur0(T.sal+(P.prorr?T.extra:0)+T.plus)+'</b>, líquido <b>'+eur0(T.netoMes-T.dieta)+'</b>'+
@@ -1425,16 +1515,16 @@ function dibujarNeto(P,pasos){
   let s='';
   for(let k=0;k<=4;k++){
     const val=yMin+(yMax-yMin)*k/4;
-    s+=`<line x1="${ml}" y1="${Y(val)}" x2="${W-mr}" y2="${Y(val)}" stroke="#D5DCCF"/>`;
-    s+=`<text x="${ml-8}" y="${Y(val)+4}" text-anchor="end" font-size="11" fill="#6A7970">${Math.round(val/1000)}k</text>`;
+    s+=`<line x1="${ml}" y1="${Y(val)}" x2="${W-mr}" y2="${Y(val)}" stroke="#D3DCE8"/>`;
+    s+=`<text x="${ml-8}" y="${Y(val)+4}" text-anchor="end" font-size="11" fill="#5B6B82">${Math.round(val/1000)}k</text>`;
   }
   const rej=(x1-x0)>60000?20000:(x1-x0)>25000?10000:5000;
   for(let v=Math.ceil(x0/rej)*rej;v<=x1;v+=rej)
-    s+=`<text x="${X(v)}" y="${H-12}" text-anchor="middle" font-size="11" fill="#6A7970">${v/1000}k</text>`;
-  s+=linea(cp,'#1E5148')+linea(cu,'#A31E24');
+    s+=`<text x="${X(v)}" y="${H-12}" text-anchor="middle" font-size="11" fill="#5B6B82">${v/1000}k</text>`;
+  s+=linea(cp,'#0061A8')+linea(cu,'#B3261E');
   pasos.forEach((p,k)=>{
-    s+=`<circle cx="${X(p.b)}" cy="${Y(p.R.neto)}" r="4.5" fill="#17201A"/>`;
-    if(k) s+=`<text x="${X(p.b)}" y="${Y(p.R.neto)+18}" text-anchor="middle" font-size="11" fill="#17201A">${k}</text>`;
+    s+=`<circle cx="${X(p.b)}" cy="${Y(p.R.neto)}" r="4.5" fill="#0F1E33"/>`;
+    if(k) s+=`<text x="${X(p.b)}" y="${Y(p.R.neto)+18}" text-anchor="middle" font-size="11" fill="#0F1E33">${k}</text>`;
   });
   $('chartNeto').innerHTML=s;
 }
@@ -1447,12 +1537,12 @@ function dibujarTipo(P){
   const Y=v=>mt+(1-v/y1)*(H-mt-mb);
   let s='';
   for(let g=0;g<=40;g+=10){
-    s+=`<line x1="${ml}" y1="${Y(g)}" x2="${W-mr}" y2="${Y(g)}" stroke="#D5DCCF"/>`;
-    s+=`<text x="${ml-8}" y="${Y(g)+4}" text-anchor="end" font-size="11" fill="#6A7970">${g} %</text>`;
+    s+=`<line x1="${ml}" y1="${Y(g)}" x2="${W-mr}" y2="${Y(g)}" stroke="#D3DCE8"/>`;
+    s+=`<text x="${ml-8}" y="${Y(g)+4}" text-anchor="end" font-size="11" fill="#5B6B82">${g} %</text>`;
   }
   const rej=x1>200000?40000:20000;
   for(let v=rej;v<=x1;v+=rej)
-    s+=`<text x="${X(v)}" y="${H-12}" text-anchor="middle" font-size="11" fill="#6A7970">${v/1000}k</text>`;
+    s+=`<text x="${X(v)}" y="${H-12}" text-anchor="middle" font-size="11" fill="#5B6B82">${v/1000}k</text>`;
   const stepv=Math.max(250,Math.round((x1-x0)/500/50)*50);
   let pu='',pp='';
   for(let v=x0;v<=x1;v+=stepv){
@@ -1460,11 +1550,11 @@ function dibujarTipo(P){
     pu+=(pu?'L':'M')+a+','+Y(tipoUnico(v,P.desc,P.disc)).toFixed(1);
     pp+=(pp?'L':'M')+a+','+Y(irpfProgresivo(v,P.desc,P.disc)/v*100).toFixed(1);
   }
-  s+=`<path d="${pu}" fill="none" stroke="#A31E24" stroke-width="2"/>`;
-  s+=`<path d="${pp}" fill="none" stroke="#1E5148" stroke-width="2"/>`;
+  s+=`<path d="${pu}" fill="none" stroke="#B3261E" stroke-width="2"/>`;
+  s+=`<path d="${pp}" fill="none" stroke="#0061A8" stroke-width="2"/>`;
   if(bruto>=x0&&bruto<=x1){
-    s+=`<line x1="${X(bruto)}" y1="${mt}" x2="${X(bruto)}" y2="${H-mb}" stroke="#17201A" stroke-dasharray="4 3"/>`;
-    s+=`<circle cx="${X(bruto)}" cy="${Y(tipoUnico(bruto,P.desc,P.disc))}" r="4" fill="#A31E24"/>`;
+    s+=`<line x1="${X(bruto)}" y1="${mt}" x2="${X(bruto)}" y2="${H-mb}" stroke="#0F1E33" stroke-dasharray="4 3"/>`;
+    s+=`<circle cx="${X(bruto)}" cy="${Y(tipoUnico(bruto,P.desc,P.disc))}" r="4" fill="#B3261E"/>`;
   }
   $('chartTipo').innerHTML=s;
 }
@@ -1478,35 +1568,160 @@ function dibujarEstancia(filas){
   let s='';
   for(let k=0;k<=4;k++){
     const val=yMax*k/4;
-    s+=`<line x1="${ml}" y1="${Y(val)}" x2="${W-mr}" y2="${Y(val)}" stroke="#D5DCCF"/>`;
-    s+=`<text x="${ml-8}" y="${Y(val)+4}" text-anchor="end" font-size="11" fill="#6A7970">${nfx.format(Math.round(val/100)/10)}k</text>`;
+    s+=`<line x1="${ml}" y1="${Y(val)}" x2="${W-mr}" y2="${Y(val)}" stroke="#D3DCE8"/>`;
+    s+=`<text x="${ml-8}" y="${Y(val)+4}" text-anchor="end" font-size="11" fill="#5B6B82">${nfx.format(Math.round(val/100)/10)}k</text>`;
   }
   const cada=Math.ceil(n/10);
   filas.forEach((F,k)=>{
     const x=ml+k*bw, w=Math.max(1,bw-3);
-    s+=`<rect x="${(x+1.5).toFixed(1)}" y="${Y(F.neto).toFixed(1)}" width="${w.toFixed(1)}" height="${(H-mb-Y(F.neto)).toFixed(1)}" fill="#1E5148"><title>${mesLabel(F.M.i)}: ${eur(F.neto)} desplazado · ${eur(F.netoS)} si te quedas</title></rect>`;
-    s+=`<line x1="${(x+1.5).toFixed(1)}" x2="${(x+1.5+w).toFixed(1)}" y1="${Y(F.netoS).toFixed(1)}" y2="${Y(F.netoS).toFixed(1)}" stroke="#17201A" stroke-width="2"/>`;
-    if(k%cada===0) s+=`<text x="${(x+1.5+w/2).toFixed(1)}" y="${H-10}" text-anchor="middle" font-size="11" fill="#6A7970">${MESES[F.M.m-1]}${F.M.m===1||k===0?' '+String(F.M.y).slice(2):''}</text>`;
+    s+=`<rect x="${(x+1.5).toFixed(1)}" y="${Y(F.neto).toFixed(1)}" width="${w.toFixed(1)}" height="${(H-mb-Y(F.neto)).toFixed(1)}" fill="#0061A8"><title>${mesLabel(F.M.i)}: ${eur(F.neto)} desplazado · ${eur(F.netoS)} si te quedas</title></rect>`;
+    s+=`<line x1="${(x+1.5).toFixed(1)}" x2="${(x+1.5+w).toFixed(1)}" y1="${Y(F.netoS).toFixed(1)}" y2="${Y(F.netoS).toFixed(1)}" stroke="#0F1E33" stroke-width="2"/>`;
+    if(k%cada===0) s+=`<text x="${(x+1.5+w/2).toFixed(1)}" y="${H-10}" text-anchor="middle" font-size="11" fill="#5B6B82">${MESES[F.M.m-1]}${F.M.m===1||k===0?' '+String(F.M.y).slice(2):''}</text>`;
   });
   $('chartEstancia').innerHTML=s;
+}
+
+/* ============================================================
+   COMPARADOR
+   ============================================================ */
+/* Calcula con otro estado sin tocar lo que hay en pantalla */
+function conEstado(st,fn){
+  const actual=estado(), modo=S.mode, ult=S.ultimo;
+  try{ ponerEstado(st); return fn(leer(),S.mode); }
+  finally{ ponerEstado(actual); S.mode=modo; S.ultimo=ult; }
+}
+const NOMBRE_MODO={desglose:'Nómina',subidas:'Subidas de sueldo',estancia:'Estancia',comparador:'Nómina'};
+function resumenEscenario(P,modo){
+  const base={modo,salario0:P.salario0,variable:P.variable,pagas:P.pagas,
+    irpfModo:{tabla:'Tabla foral',prog:'Por tramos',manual:'Manual '+pct(P.irpfManual*100),zero:'0 %'}[P.irpf]};
+  if(modo==='estancia'){
+    const E=datosEstancia(P);
+    if(E.err) return {...base,err:E.err};
+    const T=E.T,B=E.B;
+    return {...base,titulo:'Estancia en '+P.destino,
+      detalle:P.origen+' → '+P.destino+' · del '+P.salida.d+' '+MESES[P.salida.m-1]+' '+P.salida.y+' al '+P.regreso.d+' '+MESES[P.regreso.m-1]+' '+P.regreso.y,
+      periodo:S.periodo==='custom'?E.per.txt:'la estancia ('+nf0.format(T.periodo)+' días)',meses:T.meses,
+      sal:T.sal+T.ext+T.variable,plus:T.plus,dieta:T.dieta,dev:T.dev,suj:T.suj,
+      irpf:T.irpf-T.comp,comp:T.comp,ss:T.ss,neto:T.neto,gana:T.neto-B.neto,fuera:T.fuera};
+  }
+  let b=P.salario0;
+  if(modo==='subidas') for(const s of P.subidas) b*=1+s.pct/100;
+  const R=motor(b,P);
+  return {...base,titulo:modo==='subidas'?'Tras '+P.subidas.length+' subida'+(P.subidas.length===1?'':'s'):'Nómina anual',
+    detalle:modo==='subidas'?'Salario base '+eur0(P.salario0)+' → '+eur0(b):'Salario base '+eur0(b),
+    periodo:'1 año',meses:12,sal:R.total,plus:0,dieta:0,dev:R.total,suj:R.total,
+    irpf:R.irpf,comp:0,ss:R.ssAnual,neto:R.neto,gana:null,fuera:0,netoMes:R.netoMes,netoExtra:R.netoExtra};
+}
+function guardarComparador(){
+  try{ localStorage.setItem('idom-comparador',JSON.stringify(S.cmp)); }catch(e){}
+}
+function cargarComparador(){
+  try{ const t=localStorage.getItem('idom-comparador'); if(t){ const c=JSON.parse(t); if(c&&typeof c==='object') S.cmp={A:c.A||null,B:c.B||null}; } }catch(e){}
+}
+let cmpDestino='A';
+document.querySelector('.solo-comparador').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-acc]'); if(!b)return;
+  const k=b.dataset.s;
+  if(b.dataset.acc==='cargar'){ cmpDestino=k; $('cmpFichero').click(); }
+  if(b.dataset.acc==='actual'){
+    const st=estado();
+    S.cmp[k]={nombre:'Pantalla · '+NOMBRE_MODO[st.S.mode]+' · '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),st};
+    guardarComparador(); calc();
+  }
+  if(b.dataset.acc==='quitar'){ S.cmp[k]=null; guardarComparador(); calc(); }
+});
+$('cmpFichero').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const st=JSON.parse(rd.result);
+      if(!st||!st.S||!st.campos) throw new Error('no es un JSON guardado con esta calculadora');
+      S.cmp[cmpDestino]={nombre:f.name,st};
+      guardarComparador(); calc();
+    }catch(err){ alert('Archivo no válido: '+err.message); }
+  };
+  rd.readAsText(f); e.target.value='';
+});
+
+function pintarComparador(){
+  const R={};
+  for(const k of ['A','B']){
+    const c=S.cmp[k];
+    $('cmpNom'+k).textContent=c?'· '+c.nombre:'';
+    if(!c){ R[k]=null; $('cmpInfo'+k).innerHTML='<div class="cmp-vacio">Carga un JSON guardado con «Guardar JSON» o usa lo que tienes ahora en pantalla.</div>'; continue; }
+    let r;
+    try{ r=conEstado(c.st,(P,modo)=>resumenEscenario(P,modo)); }
+    catch(err){ r={err:'No se ha podido calcular: '+err.message}; }
+    R[k]=r;
+    $('cmpInfo'+k).innerHTML=r.err?'<div class="aviso">'+r.err+'</div>':
+      '<b>'+r.titulo+'</b><br>'+r.detalle+'<br>Periodo: '+r.periodo+' · '+r.irpfModo+(r.variable?' · variable '+eur0(r.variable):'');
+  }
+  const A=R.A,B=R.B, ok=A&&B&&!A.err&&!B.err;
+  if(!ok){
+    $('cmpKpis').innerHTML=''; $('cmpTabla').innerHTML='';
+    $('cmpNota').innerHTML='Carga los dos escenarios para compararlos.';
+    return;
+  }
+  const kpi=(v,l,sub,cl)=>`<div class="kpi ${cl||''}"><div class="v">${v}</div><div class="l">${l}</div>${sub?`<div class="s">${sub}</div>`:''}</div>`;
+  const dT=B.neto-A.neto, dM=B.neto/B.meses-A.neto/A.meses;
+  $('cmpKpis').innerHTML=
+    kpi(eur0(A.neto),'líquido del escenario A',A.periodo)+
+    kpi(eur0(B.neto),'líquido del escenario B',B.periodo)+
+    kpi(signo(dT,eur0),'diferencia B − A',dT>=0?'B deja más líquido':'A deja más líquido',dT>=0?'pos':'')+
+    kpi(signo(dM,eur0),'diferencia al mes','líquido medio mensual de cada uno',dM>=0?'pos':'');
+  const txt=(et,a,b)=>`<tr><td>${et}</td><td class="n">${a}</td><td class="n">${b}</td><td class="n"></td></tr>`;
+  const fila=(et,a,b,cl,neg)=>{
+    const d=b-a;
+    return `<tr class="${cl||''}"><td>${et}</td><td class="n">${neg&&a>0.004?'−':''}${eur(a)}</td><td class="n">${neg&&b>0.004?'−':''}${eur(b)}</td>`+
+      `<td class="n ${(!neg&&d>0.004)||(neg&&d<-0.004)?'pos':''}">${Math.abs(d)<0.005?'—':signo(d,eur)}</td></tr>`;
+  };
+  const pctDe=(x,b)=>b>0?' <span class="tag">'+pct(x/b*100)+'</span>':'';
+  let h='<tr class="th"><td></td><td class="n">A</td><td class="n">B</td><td class="n">B − A</td></tr>';
+  h+=txt('Cálculo',A.titulo,B.titulo);
+  h+=txt('Periodo',A.periodo,B.periodo);
+  h+=txt('Salario base anual',eur0(A.salario0),eur0(B.salario0));
+  if(A.variable||B.variable) h+=txt('Variable anual',eur0(A.variable),eur0(B.variable));
+  h+=txt('Pagas · IRPF',A.pagas+' · '+A.irpfModo,B.pagas+' · '+B.irpfModo);
+  h+=fila('Salario devengado <span class="tag">base, extras y variable</span>',A.sal,B.sal);
+  if(A.plus||B.plus) h+=fila('Plus de desplazamiento',A.plus,B.plus);
+  if(A.dieta||B.dieta) h+=fila('Dietas <span class="tag">exentas</span>',A.dieta,B.dieta);
+  h+=fila('Total devengado',A.dev,B.dev,'total');
+  h+=`<tr class="neg"><td>IRPF que pagas</td><td class="n">−${eur(A.irpf)}${pctDe(A.irpf,A.suj)}</td><td class="n">−${eur(B.irpf)}${pctDe(B.irpf,B.suj)}</td>`+
+    `<td class="n ${B.irpf<A.irpf-0.004?'pos':''}">${Math.abs(B.irpf-A.irpf)<0.005?'—':signo(-(B.irpf-A.irpf),eur)}</td></tr>`;
+  if(A.comp||B.comp) h+=fila('<span class="tag">de ello, compensación IDOM</span>',A.comp,B.comp);
+  h+=`<tr class="neg"><td>Seguridad Social</td><td class="n">−${eur(A.ss)}${pctDe(A.ss,A.suj)}</td><td class="n">−${eur(B.ss)}${pctDe(B.ss,B.suj)}</td>`+
+    `<td class="n ${B.ss<A.ss-0.004?'pos':''}">${Math.abs(B.ss-A.ss)<0.005?'—':signo(-(B.ss-A.ss),eur)}</td></tr>`;
+  h+=fila('Líquido total',A.neto,B.neto,'total');
+  h+=fila('Líquido medio al mes',A.neto/A.meses,B.neto/B.meses);
+  if(A.gana!=null||B.gana!=null) h+=txt('Ganas frente a quedarte',A.gana!=null?signo(A.gana,eur):'—',B.gana!=null?signo(B.gana,eur):'—');
+  if(A.fuera||B.fuera) h+=txt('Días fuera',nf0.format(A.fuera),nf0.format(B.fuera));
+  $('cmpTabla').innerHTML=h;
+  $('cmpNota').innerHTML=(A.periodo!==B.periodo?'<b>Los periodos son distintos</b>: para comparar mejor, fíjate en el líquido medio al mes. ':'')+
+    'Nómina y subidas se comparan con un año completo; la estancia, con su periodo. IRPF y SS llevan al lado el porcentaje sobre lo que tributa.';
+  S._cmpR={A,B};
 }
 
 /* ============================================================
    GUARDAR / CARGAR / EXCEL
    ============================================================ */
 const CHECKS=['nuclear','regla183','tope'];
-const CAMPOS=['importe','variable','extra1','extra2','origen','destino','salida','regreso','diasDef','anio',
+const CAMPOS=['importe','variable','extra1','extra2','origen','destino','salida','regreso','calcDesde','calcHasta','diasDef','anio',
   'irpfManual','desc','disc','tipoSS','tipoEmp','baseMin','baseMax'];
 function estado(){
   const c={}; CAMPOS.forEach(id=>c[id]=$(id).value);
   CHECKS.forEach(id=>c[id]=$(id).checked);
-  return {version:1,S:JSON.parse(JSON.stringify(S)),campos:c};
+  const st=JSON.parse(JSON.stringify(S));
+  delete st.cmp; delete st.ultimo;
+  if(st.mode==='comparador') st.mode=S.ultimo||'desglose';
+  return {version:2,app:'Calculadora de nóminas y desplazamientos de IDOM',S:st,campos:c};
 }
-function aplicarEstado(st){
-  if(!st||!st.S)return;
+/* Pone un estado en el formulario sin recalcular */
+function ponerEstado(st){
   const s=st.S;
   if(s.mode==='nomina')S.mode='desglose';
-  else if(['desglose','subidas','estancia'].includes(s.mode))S.mode=s.mode;
+  else if(['desglose','subidas','estancia','comparador'].includes(s.mode))S.mode=s.mode;
+  if(['estancia','custom'].includes(s.periodo))S.periodo=s.periodo; else S.periodo='estancia';
   if(['anual','paga'].includes(s.modoImporte))S.modoImporte=s.modoImporte;
   if([12,14].includes(+s.pagas))S.pagas=+s.pagas;
   if(['aparte','prorr'].includes(s.cobroExtra))S.cobroExtra=s.cobroExtra;
@@ -1516,6 +1731,10 @@ function aplicarEstado(st){
   const c=st.campos||{};
   CAMPOS.forEach(id=>{ if(c[id]!=null) $(id).value=c[id]; });
   CHECKS.forEach(id=>{ if(c[id]!=null) $(id).checked=!!c[id]; });
+}
+function aplicarEstado(st){
+  if(!st||!st.S)return;
+  ponerEstado(st);
   syncSegs(); pintarSubidas(); calc();
 }
 function guardarLocal(){ try{ localStorage.setItem('idom-nomina-estancia',JSON.stringify(estado())); }catch(e){} }
@@ -1535,7 +1754,7 @@ function descargar(blob,nombre){
 const hoyISO=()=>new Date().toISOString().slice(0,10);
 
 $('btnGuardar').addEventListener('click',()=>{
-  descargar(new Blob([JSON.stringify(estado(),null,2)],{type:'application/json'}),'IDOM_calculadora_'+hoyISO()+'.json');
+  descargar(new Blob([JSON.stringify(estado(),null,2)],{type:'application/json'}),'Calculadora_IDOM_'+(S.mode==='comparador'?S.ultimo:S.mode)+'_'+hoyISO()+'.json');
   flash($('btnGuardar'),'Guardado');
 });
 $('btnCargar').addEventListener('click',()=>$('fichero').click());
@@ -1552,6 +1771,24 @@ $('fichero').addEventListener('change',e=>{
 $('btnExcel').addEventListener('click',()=>{
   if(!window.XLSX){ alert('No se ha podido cargar la librería de Excel. Comprueba la conexión.'); return; }
   const P=leer(), wb=XLSX.utils.book_new();
+  if(S.mode==='comparador'){
+    const R=S._cmpR;
+    if(!R){ alert('Carga los dos escenarios para exportar la comparación.'); return; }
+    const campos=[['Cálculo','titulo'],['Periodo','periodo'],['Salario base anual','salario0'],['Variable anual','variable'],
+      ['Salario devengado','sal'],['Plus','plus'],['Dietas','dieta'],['Total devengado','dev'],['IRPF que pagas','irpf'],
+      ['Compensación IDOM','comp'],['Seguridad Social','ss'],['Líquido total','neto'],['Días fuera','fuera']];
+    const rows=[['Concepto','A · '+S.cmp.A.nombre,'B · '+S.cmp.B.nombre,'B − A']];
+    for(const [l,k] of campos){
+      const a=R.A[k], b=R.B[k];
+      rows.push([l,a,b,typeof a==='number'&&typeof b==='number'?b-a:'']);
+    }
+    rows.push(['Líquido medio al mes',R.A.neto/R.A.meses,R.B.neto/R.B.meses,R.B.neto/R.B.meses-R.A.neto/R.A.meses]);
+    const ws=XLSX.utils.aoa_to_sheet(rows); ws['!cols']=[{wch:24},{wch:30},{wch:30},{wch:16}];
+    XLSX.utils.book_append_sheet(wb,ws,'Comparador');
+    XLSX.writeFile(wb,'Calculadora_IDOM_comparador_'+hoyISO()+'.xlsx');
+    flash($('btnExcel'),'Descargado');
+    return;
+  }
   const EUR='#,##0.00 "€"', PCT='0.00%';
   const hoja=(rows,cols,fmt)=>{
     const ws=XLSX.utils.aoa_to_sheet(rows);
@@ -1564,7 +1801,7 @@ $('btnExcel').addEventListener('click',()=>{
   };
 
   const par=[
-    ['Calculadora de nómina y estancias · IDOM Bizkaia'],['Generado',new Date().toLocaleDateString('es-ES')],[],
+    ['Calculadora de nóminas y desplazamientos de IDOM'],['Generado',new Date().toLocaleDateString('es-ES')],[],
     ['Modo',{desglose:'Desglose de nómina',subidas:'Subidas de sueldo',estancia:'Estancia'}[S.mode]],
     ['Salario base bruto anual',P.salario0],['Variable anual (febrero)',P.variable],['Pagas',P.pagas],
     ['Pagas extras',P.pagas===14?(P.prorr?'Prorrateadas':'Aparte, en '+P.extraMeses.map(m=>MESES_L[m-1]).join(' y ')):'—'],
@@ -1633,7 +1870,7 @@ $('btnExcel').addEventListener('click',()=>{
     XLSX.utils.book_append_sheet(wb,hoja(rows,[32,16,16,16],(r,c)=>r&&c&&r<=10?EUR:null),'Desglose estancia');
     XLSX.utils.book_append_sheet(wb,hoja(res,[6,11,14,28,18,14,18,14],(r,c)=>r&&c>=4?EUR:null),'Residencia fiscal');
   }
-  XLSX.writeFile(wb,'IDOM_'+S.mode+'_'+hoyISO()+'.xlsx');
+  XLSX.writeFile(wb,'Calculadora_IDOM_'+S.mode+'_'+hoyISO()+'.xlsx');
   flash($('btnExcel'),'Descargado');
 });
 
@@ -1646,11 +1883,13 @@ seg('segImporte','modoImporte');
 seg('segPagas','pagas',Number);
 seg('segCobro','cobroExtra');
 seg('segIrpf','irpf');
-['importe','variable','regla183','tope','extra1','extra2','origen','destino','nuclear','salida','regreso','diasDef','anio',
+seg('segPeriodo','periodo');
+['importe','variable','regla183','tope','extra1','extra2','origen','destino','nuclear','salida','regreso','calcDesde','calcHasta','diasDef','anio',
  'irpfManual','desc','disc','tipoSS','tipoEmp','baseMin','baseMax']
-  .forEach(id=>$(id).addEventListener(id==='salida'||id==='regreso'||id==='anio'?'change':'input',calc));
+  .forEach(id=>$(id).addEventListener(['salida','regreso','anio','calcDesde','calcHasta'].includes(id)?'change':'input',calc));
 ['salida','regreso','anio'].forEach(id=>$(id).addEventListener('input',()=>{ if($(id).value.length>=4) calc(); }));
 
+cargarComparador();
 if(!cargarLocal()){ syncSegs(); pintarSubidas(); calc(); }
 </script>
 </body>
