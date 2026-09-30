@@ -48,6 +48,18 @@
   .grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:24px;align-items:start}
   @media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
   .grid > *{min-width:0}
+  body.m-estancia .wrap{max-width:1680px}
+  body.m-estancia .grid{grid-template-columns:320px minmax(0,1fr)}
+  @media (max-width:900px){body.m-estancia .grid{grid-template-columns:minmax(0,1fr)}}
+  .dos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:18px}
+  .dos > .panel{margin-top:0 !important}
+  @media (max-width:1150px){.dos{grid-template-columns:minmax(0,1fr)}}
+  #eCalPanel .scrollx table{min-width:1000px}
+  #eAnios td{padding-right:12px}
+  #eAnios td:last-child{padding-right:0}
+  table.cal td{white-space:nowrap}
+  .pill.nores{color:var(--teal);background:#E3EEE9}
+  .pill.res{color:var(--muted)}
 
   .panel{background:var(--card);border:1px solid var(--line);padding:20px}
   .panel + .panel{margin-top:18px}
@@ -219,13 +231,18 @@
   <form class="panel" id="form" onsubmit="return false">
     <h3>Sueldo</h3>
     <div class="field">
-      <label class="lab" for="importe">Salario bruto actual</label>
+      <label class="lab" for="importe">Salario base bruto</label>
       <input class="big-input" type="number" id="importe" value="35000" min="0" step="100">
       <div class="seg" style="margin-top:8px" id="segImporte">
         <button type="button" data-v="anual" aria-pressed="true">Al año</button>
         <button type="button" data-v="paga" aria-pressed="false">Por paga</button>
       </div>
       <div class="hint" id="hintImporte"></div>
+    </div>
+    <div class="field">
+      <label class="lab" for="variable">Variable bruto anual</label>
+      <input type="number" id="variable" value="0" min="0" step="100">
+      <div class="hint">Se cobra entero en febrero, sin prorratear ni entrar en las extras. Cuenta para el tipo de IRPF.</div>
     </div>
 
     <div class="field">
@@ -284,7 +301,13 @@
       <div class="field">
         <label class="lab" for="diasDef">Días en destino en un mes completo</label>
         <input type="number" id="diasDef" value="22" min="0" max="31">
-        <div class="hint">Se puede cambiar mes a mes en la tabla del calendario.</div>
+        <div class="hint">Se puede cambiar mes a mes en la tabla del calendario. Las dietas no cuentan para el tipo de IRPF.</div>
+      </div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="regla183" checked> Residente fiscal en España: sin IRPF el año natural con menos de 183 días en España</label>
+      </div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="tope" checked> El resto de años, IDOM compensa para que no pagues más IRPF que quedándote en España</label>
       </div>
     </div>
 
@@ -369,6 +392,10 @@
           <div class="solo-extra-aparte" id="nHeroExtraBox">
             <div class="sub" id="nHeroExtra">—</div>
             <div class="sub-lab">líquido de cada paga extra</div>
+          </div>
+          <div id="nHeroVarBox">
+            <div class="sub" id="nHeroVar">—</div>
+            <div class="sub-lab">líquido del variable, en febrero</div>
           </div>
           <div>
             <div class="sub" id="nHeroAnual">—</div>
@@ -475,6 +502,7 @@
           <div class="cfg" id="eCfg"></div>
         </div>
 
+        <div class="dos">
         <div class="panel" style="margin-top:18px">
           <h2>Con y sin desplazamiento <span class="tag" id="eResTag"></span></h2>
           <div class="ancho"><table id="eResumen"></table></div>
@@ -489,23 +517,36 @@
           </div>
           <svg id="chartEstancia" viewBox="0 0 760 260" role="img" aria-label="Líquido mensual con y sin desplazamiento"></svg>
         </div>
+        </div>
 
         <div class="panel" style="margin-top:18px">
-          <h2>Mes a mes, por años naturales</h2>
-          <div class="hint" style="margin:-4px 0 6px">Los días en destino se pueden editar; los meses cambiados quedan marcados. <button type="button" class="btn" id="btnResetDias" style="padding:3px 8px;font-size:12px;margin-left:6px">Volver a los días por defecto</button></div>
-          <div id="eCalendario"></div>
+          <h2>IRPF y residencia fiscal, año a año</h2>
+          <div class="ancho"><table id="eAnios"></table></div>
+          <div class="note" id="eAniosNota"></div>
         </div>
+
       </div>
     </div>
+
+  </div>
+</div>
+
+<div class="solo-estancia" id="eCalPanel">
+  <div class="panel" style="margin-top:18px">
+    <h2>Mes a mes, por años naturales</h2>
+    <div class="hint" style="margin:-4px 0 6px">Los días en destino se pueden editar; los meses cambiados quedan marcados. <button type="button" class="btn" id="btnResetDias" style="padding:3px 8px;font-size:12px;margin-left:6px">Volver a los días por defecto</button></div>
+    <div id="eCalendario"></div>
+  </div>
+</div>
 
     <footer>
       <p><b>IRPF.</b> Tabla general de retenciones sobre trabajo personal de la Diputación Foral de Bizkaia vigente desde el 01/01/2026, con descendientes y reducciones por discapacidad. En el calendario la retención se regulariza cada mes: el tipo se recalcula con lo cobrado en el año y lo que queda por cobrar en las condiciones de ese mes, igual que hace la nómina cuando cambia el sueldo o te desplazas. El modo por tramos no existe en la normativa foral, solo sirve de contraste.</p>
       <p><b>Seguridad Social.</b> Cuota obrera del 6,50 % (contingencias comunes 4,70 + MEI 0,15 + desempleo, FOGASA y formación 1,65). La base mensual incluye la prorrata de las extras y el plus, con los topes mínimo y máximo, así que las extras no cotizan en el mes en que se cobran.</p>
       <p><b>Desplazamiento.</b> Plus = salario anual ÷ 365 × % × días en destino, con un 15 % de base, más la diferencia de porcentaje si el destino tiene más que el origen, y +10 % en central nuclear. Las dietas de manutención son netas y exentas de IRPF y SS dentro de los límites del art. 13 NF 13/2013; el alojamiento lo paga IDOM directamente y no aparece. Las pagas extras solo llevan salario base, sin plus ni dietas.</p>
+      <p><b>Residencia fiscal y tope de IDOM.</b> Si en un año natural pasas menos de 183 días en España (contando días naturales entre la salida y el regreso), ese año no se retiene IRPF. En los años en que sigues siendo residente, IDOM compensa la diferencia para que no pagues más IRPF que si te hubieras quedado en España. Las dietas nunca cuentan para el tipo de retención.</p>
+      <p><b>Variable.</b> Se cobra íntegro en febrero, sin prorratear ni entrar en las extras ni en el plus. Suma para calcular el tipo de IRPF de todo el año y cotiza en febrero hasta la base máxima.</p>
       <p>Cálculo orientativo. La retención es un pago a cuenta: la cuota definitiva sale en la declaración y puede haber exenciones por trabajos en el extranjero que aquí no se aplican.</p>
     </footer>
-  </div>
-</div>
 </div>
 
 <script>
@@ -579,6 +620,7 @@ const eur=n=>nf2.format(n)+' €';
 const eur0=n=>nf0.format(n)+' €';
 const pct=n=>nf2.format(n)+' %';          // n ya en porcentaje
 const milar=n=>nfx.format(n);
+const menos=v=>v>0.004?'−'+eur(v):'—';
 const signo=(n,f)=>(n>=0?'+':'−')+f(Math.abs(n));
 const mesLabel=i=>MESES[((i%12)+12)%12]+' '+Math.floor(i/12);
 const ymKey=i=>Math.floor(i/12)+'-'+String(i%12+1).padStart(2,'0');
@@ -650,7 +692,8 @@ function leer(){
     .sort((x,y)=>x.i-y.i);
   const bMax=num('baseMax')||1e9;
   return {
-    salario0,pagas,extraMeses,prorr,
+    salario0,pagas,extraMeses,prorr,variable:Math.max(0,num('variable')),
+    regla183:$('regla183').checked,tope:$('tope').checked,
     desc:+$('desc').value,disc:+$('disc').value,
     irpf:S.irpf,irpfManual:num('irpfManual')/100,
     tSS:num('tipoSS')/100,tEmp:num('tipoEmp')/100,bMin:num('baseMin'),bMax,
@@ -716,9 +759,24 @@ function situacion(P,y,m,est){
   return {dias,fin:i<r.i,sit,ov,d0,d1};
 }
 
+/* Días naturales fuera de España en el año y, entre la salida y el regreso */
+const diaNum=(y,m,d)=>Date.UTC(y,m-1,d)/864e5;
+function residencia(P,y,est){
+  const diasAnio=diaNum(y+1,1,1)-diaNum(y,1,1);
+  let fuera=0;
+  if(est&&P.salida&&P.regreso){
+    const a=Math.max(diaNum(P.salida.y,P.salida.m,P.salida.d),diaNum(y,1,1));
+    const b=Math.min(diaNum(P.regreso.y,P.regreso.m,P.regreso.d),diaNum(y,12,31));
+    fuera=Math.max(0,b-a+1);
+  }
+  const espana=diasAnio-fuera;
+  return {fuera,espana,noRes:!!(est&&P.regla183&&espana<183)};
+}
+
 /* Un año natural mes a mes. est=true aplica la estancia (plus y dietas). */
 function simularAnio(P,y,est){
   const meses=[];
+  const RES=residencia(P,y,est);
   for(let m=1;m<=12;m++){
     const i=y*12+m-1;
     const sa=salAnual(P,i), salMes=sa/P.pagas;
@@ -730,17 +788,20 @@ function simularAnio(P,y,est){
       if(P.prorr) extra=salMes/largoPeriodo(P,m);
       else if(P.extraMeses.includes(m)){ extra=importeExtra(P,i); extraInfo=infoExtra(P,i); }
     }
+    const variable=m===2?P.variable:0;
     const baseSS=clampBase(salMes*P.pagas/12+plus,P);
-    meses.push({y,m,i,sa,salMes,D,plus,dieta,extra,extraInfo,baseSS,ss:baseSS*P.tSS,
+    const ssVar=(clampBase(salMes*P.pagas/12+plus+variable,P)-baseSS)*P.tSS;
+    meses.push({y,m,i,sa,salMes,D,plus,dieta,extra,extraInfo,variable,baseSS,ss:baseSS*P.tSS,ssVar,
                 subida:P.subidas.find(s=>s.i===i)});
   }
 
   /* IRPF con regularización mensual */
   let retenido=0, acum=0;
   for(const M of meses){
-    const suj=M.salMes+M.extra+M.plus;
+    /* las dietas no cuentan para el IRPF; el variable sí */
+    const suj=M.salMes+M.extra+M.plus+M.variable;
     let tipo;
-    if(P.irpf==='zero') tipo=0;
+    if(P.irpf==='zero'||RES.noRes) tipo=0;
     else if(P.irpf==='manual') tipo=P.irpfManual;
     else{
       /* lo que queda del año, suponiendo que las condiciones de este mes se mantienen */
@@ -748,7 +809,7 @@ function simularAnio(P,y,est){
       const plusCur=M.D.fin?M.sa/365*P.pctPlus*P.diasDef:0;
       let fut=0;
       for(let j=M.m+1;j<=12;j++){
-        fut+=salCur+plusCur;
+        fut+=salCur+plusCur+(j===2?P.variable:0);
         if(P.pagas===14){
           if(P.prorr) fut+=salCur/largoPeriodo(P,j);
           else if(P.extraMeses.includes(j)) fut+=salCur;
@@ -765,44 +826,59 @@ function simularAnio(P,y,est){
     M.tipo=tipo;
     M.irpfMes=baseMes*tipo;
     M.irpfExtra=baseExtra*tipo;
-    M.irpf=M.irpfMes+M.irpfExtra;
+    M.irpfVar=M.variable*tipo;
+    M.irpf=M.irpfMes+M.irpfExtra+M.irpfVar;
     M.brutoMes=baseMes+M.dieta;
     M.netoMes=baseMes+M.dieta-M.irpfMes-M.ss;
     M.netoExtra=baseExtra-M.irpfExtra;
-    M.neto=M.netoMes+M.netoExtra;
+    M.netoVar=M.variable-M.irpfVar-M.ssVar;
+    M.neto=M.netoMes+M.netoExtra+M.netoVar;
     retenido+=M.irpf; acum+=suj;
   }
-  return {y,meses,tot:totales(meses,P)};
+  return {y,meses,res:RES,comp:0,tot:totales(meses,P)};
 }
 
 function totales(meses,P){
-  const t={sal:0,extra:0,plus:0,dieta:0,irpf:0,ss:0,neto:0,netoMes:0,netoExtra:0,
-           irpfMes:0,irpfExtra:0,dias:0,suj:0};
+  const t={sal:0,extra:0,plus:0,dieta:0,variable:0,irpf:0,ss:0,neto:0,netoMes:0,netoExtra:0,netoVar:0,
+           irpfMes:0,irpfExtra:0,irpfVar:0,ssVar:0,dias:0,suj:0,comp:0};
   for(const M of meses){
-    t.sal+=M.salMes; t.extra+=M.extra; t.plus+=M.plus; t.dieta+=M.dieta;
-    t.irpf+=M.irpf; t.ss+=M.ss; t.neto+=M.neto; t.netoMes+=M.netoMes; t.netoExtra+=M.netoExtra;
-    t.irpfMes+=M.irpfMes; t.irpfExtra+=M.irpfExtra; t.dias+=M.D.dias;
+    t.sal+=M.salMes; t.extra+=M.extra; t.plus+=M.plus; t.dieta+=M.dieta; t.variable+=M.variable;
+    t.irpf+=M.irpf; t.ss+=M.ss+M.ssVar; t.ssVar+=M.ssVar; t.neto+=M.neto;
+    t.netoMes+=M.netoMes; t.netoExtra+=M.netoExtra; t.netoVar+=M.netoVar;
+    t.irpfMes+=M.irpfMes; t.irpfExtra+=M.irpfExtra; t.irpfVar+=M.irpfVar; t.dias+=M.D.dias;
   }
-  t.suj=t.sal+t.extra+t.plus;
+  t.suj=t.sal+t.extra+t.plus+t.variable;
   t.dev=t.suj+t.dieta;
   t.tipoEf=t.suj>0?t.irpf/t.suj:0;
   return t;
 }
 
+/* Tope de IDOM: en los años con residencia en España no pagas más IRPF que quedándote.
+   La diferencia se suma como compensación al final del año. */
+function aplicarTope(con,sin,P){
+  const comp=(P.tope&&!con.res.noRes)?Math.max(0,con.tot.irpf-sin.tot.irpf):0;
+  con.comp=comp; con.tot.comp=comp; con.tot.neto+=comp;
+  con.tot.irpfNeto=con.tot.irpf-comp;
+  return con;
+}
+
 /* Nómina anualizada para un bruto fijo todo el año (sin desplazamiento) */
 function motor(b,P,modo){
   modo=modo||P.irpf;
+  const v=P.variable||0, total=b+v;
   const salMes=b/P.pagas;
-  const ss=clampBase(b/12,P)*P.tSS, ssAnual=ss*12;
-  const irpf=retencionAnual(b,P,modo);
-  const tipo=b>0?irpf/b:0;
+  const baseM=clampBase(b/12,P);
+  const ss=baseM*P.tSS, ssVar=(clampBase(b/12+v,P)-baseM)*P.tSS, ssAnual=ss*12+ssVar;
+  const irpf=retencionAnual(total,P,modo);
+  const tipo=total>0?irpf/total:0;
   const aparte=P.pagas===14&&!P.prorr;
   const brutoMes=aparte?salMes:b/12;
   const brutoExtra=aparte?salMes:0;
-  return {b,tU:tipoUnico(b,P.desc,P.disc),irpf,tipo,ss,ssAnual,brutoMes,brutoExtra,
-          irpfMes:brutoMes*tipo,irpfExtra:brutoExtra*tipo,
+  return {b,v,total,tU:tipoUnico(total,P.desc,P.disc),irpf,tipo,ss,ssVar,ssAnual,brutoMes,brutoExtra,
+          irpfMes:brutoMes*tipo,irpfExtra:brutoExtra*tipo,irpfVar:v*tipo,
           netoMes:brutoMes-ss-brutoMes*tipo,netoExtra:brutoExtra-brutoExtra*tipo,
-          neto:b-ssAnual-irpf};
+          netoVar:v-v*tipo-ssVar,
+          neto:total-ssAnual-irpf};
 }
 
 /* ============================================================
@@ -918,6 +994,8 @@ function pintarNomina(P){
     :P.pagas===14?'líquido cada mes, con las extras prorrateadas':'líquido cada mes, las doce veces';
   $('nHeroExtraBox').style.display=aparte?'':'none';
   $('nHeroExtra').textContent=eur(R.netoExtra);
+  $('nHeroVarBox').style.display=R.v>0?'':'none';
+  $('nHeroVar').textContent=eur(R.netoVar);
   $('nHeroAnual').textContent=eur0(R.neto);
   $('nHeroTipo').textContent=textoTipo(R,P);
   $('nHeroTipoLab').textContent={tabla:'tipo de la tabla foral',prog:'tipo medio por tramos',
@@ -925,7 +1003,7 @@ function pintarNomina(P){
 
   /* nota de salto de tramo */
   if(P.irpf==='tabla'){
-    const bruto=P.salario0, f=filaTabla(bruto), techo=f[0];
+    const bruto=R.total, f=filaTabla(bruto), techo=f[0];
     let t;
     if(bruto<=20000) t='Por debajo de 20.000 € no hay retención. Te quedan '+eur0(20000-bruto)+' de margen.';
     else if(techo===Infinity) t='Estás en el último tramo de la tabla.';
@@ -933,7 +1011,7 @@ function pintarNomina(P){
       const sig=TABLA[TABLA.indexOf(f)+1];
       const tSig=Math.max(0,sig[1][Math.min(P.desc,6)]-reduccion(techo+0.01,P.disc));
       const extra=(techo+0.01)*(tSig-R.tU)/100;
-      t='El tramo llega hasta <b>'+eur0(techo)+'</b>. Te faltan '+eur0(techo-bruto)+
+      t=(R.v>0?'Con el variable, tu base de retención es '+eur0(bruto)+'. ':'')+'El tramo llega hasta <b>'+eur0(techo)+'</b>. Te faltan '+eur0(techo-bruto)+
         ' para saltar al '+tSig+' %, que se aplica sobre todo el sueldo: unos <b>'+eur0(extra)+
         '</b> más de retención al año por cruzar la línea.';
     }
@@ -945,35 +1023,34 @@ function pintarNomina(P){
 
   /* reparto mensualidad / extra / año */
   const tt=$('nTablaReparto');
-  if(aparte){
-    tt.innerHTML=`
-      <tr class="th"><td></td><td class="n">Mensualidad (×12)</td><td class="n">Paga extra (×2)</td><td class="n">Año</td></tr>
-      <tr><td>Bruto</td><td class="n">${eur(R.brutoMes)}</td><td class="n">${eur(R.brutoExtra)}</td><td class="n">${eur(R.b)}</td></tr>
-      <tr class="neg"><td>Seguridad Social</td><td class="n">−${eur(R.ss)}</td><td class="n">—</td><td class="n">−${eur(R.ssAnual)}</td></tr>
-      <tr class="neg"><td>IRPF <span class="tag">${textoTipo(R,P)}</span></td><td class="n">−${eur(R.irpfMes)}</td><td class="n">−${eur(R.irpfExtra)}</td><td class="n">−${eur(R.irpf)}</td></tr>
-      <tr class="total"><td>Líquido</td><td class="n">${eur(R.netoMes)}</td><td class="n">${eur(R.netoExtra)}</td><td class="n">${eur(R.neto)}</td></tr>`;
-  }else{
-    tt.innerHTML=`
-      <tr class="th"><td></td><td class="n">Cada mes (×12)</td><td class="n">Año</td></tr>
-      <tr><td>Bruto${P.pagas===14?' <span class="tag">con 2/12 de extra</span>':''}</td><td class="n">${eur(R.brutoMes)}</td><td class="n">${eur(R.b)}</td></tr>
-      <tr class="neg"><td>Seguridad Social</td><td class="n">−${eur(R.ss)}</td><td class="n">−${eur(R.ssAnual)}</td></tr>
-      <tr class="neg"><td>IRPF <span class="tag">${textoTipo(R,P)}</span></td><td class="n">−${eur(R.irpfMes)}</td><td class="n">−${eur(R.irpf)}</td></tr>
-      <tr class="total"><td>Líquido</td><td class="n">${eur(R.netoMes)}</td><td class="n">${eur(R.neto)}</td></tr>`;
-  }
-  const costeEmp=clampBase(P.salario0/12,P)*12*P.tEmp;
-  $('nCosteNota').innerHTML='Le cuestas a la empresa <b>'+eur0(P.salario0+costeEmp)+'</b> al año: tu bruto más '+
+  const cols=[{h:aparte?'Mensualidad (×12)':'Cada mes (×12)',b:R.brutoMes,ss:R.ss,irpf:R.irpfMes,neto:R.netoMes}];
+  if(aparte) cols.push({h:'Paga extra (×2)',b:R.brutoExtra,ss:null,irpf:R.irpfExtra,neto:R.netoExtra});
+  if(R.v>0) cols.push({h:'Variable (febrero)',b:R.v,ss:R.ssVar,irpf:R.irpfVar,neto:R.netoVar});
+  cols.push({h:'Año',b:R.total,ss:R.ssAnual,irpf:R.irpf,neto:R.neto});
+  const fl=(f,neg)=>cols.map(c=>{const v=f(c);return '<td class="n">'+(v==null?'—':(neg?'−':'')+eur(v))+'</td>';}).join('');
+  tt.innerHTML='<tr class="th"><td></td>'+cols.map(c=>'<td class="n">'+c.h+'</td>').join('')+'</tr>'+
+    '<tr><td>Bruto'+(!aparte&&P.pagas===14?' <span class="tag">con 2/12 de extra</span>':'')+'</td>'+fl(c=>c.b)+'</tr>'+
+    '<tr class="neg"><td>Seguridad Social</td>'+fl(c=>c.ss,true)+'</tr>'+
+    '<tr class="neg"><td>IRPF <span class="tag">'+textoTipo(R,P)+'</span></td>'+fl(c=>c.irpf,true)+'</tr>'+
+    '<tr class="total"><td>Líquido</td>'+fl(c=>c.neto)+'</tr>';
+  const bm=clampBase(P.salario0/12,P);
+  const costeEmp=(bm*12+clampBase(P.salario0/12+R.v,P)-bm)*P.tEmp;
+  $('nCosteNota').innerHTML='Le cuestas a la empresa <b>'+eur0(R.total+costeEmp)+'</b> al año: tu bruto más '+
     eur0(costeEmp)+' de cotización a su cargo.'+
-    (aparte?' Las extras no cotizan cuando se cobran: ya van prorrateadas en la base de cada mes.':'');
+    (aparte?' Las extras no cotizan cuando se cobran: ya van prorrateadas en la base de cada mes.':'')+
+    (R.v>0?' El variable cotiza en febrero, hasta la base máxima.':'');
 
   /* recorrido de subidas */
   const pasos=[{et:'Hoy',desde:'',b:P.salario0}];
   let b=P.salario0;
   P.subidas.forEach((s,k)=>{ b*=1+s.pct/100; pasos.push({et:'Subida '+(k+1)+' <span class="tag">'+signo(s.pct,milar)+' %</span>',desde:mesLabel(s.i),b}); });
   pasos.forEach(p=>p.R=motor(p.b,P));
-  let h='<thead><tr><th>Momento</th><th>Desde</th><th class="n">Bruto anual</th>'+
+  const hayVar=P.variable>0;
+  let h='<thead><tr><th>Momento</th><th>Desde</th><th class="n">Salario base anual</th>'+
     '<th class="n sep">Mensualidad bruta</th>'+(aparte?'<th class="n">Extra bruta</th>':'')+
     '<th class="n sep">Retención</th><th class="n sep">Líquido mensualidad</th>'+
-    (aparte?'<th class="n">Líquido extra</th>':'')+'<th class="n">Líquido anual</th><th class="n">Cambio al mes</th></tr></thead><tbody>';
+    (aparte?'<th class="n">Líquido extra</th>':'')+(hayVar?'<th class="n">Líquido variable</th>':'')+
+    '<th class="n">Líquido anual</th><th class="n">Cambio al mes</th></tr></thead><tbody>';
   let malos=0;
   pasos.forEach((p,k)=>{
     const prev=k?pasos[k-1].R:null, d=prev?p.R.netoMes-prev.netoMes:null;
@@ -981,7 +1058,7 @@ function pintarNomina(P){
     h+=`<tr class="${baja?'cliff':''}"><td>${p.et}</td><td>${p.desde||'—'}</td><td class="n">${eur0(p.b)}</td>
       <td class="n sep">${eur(p.R.brutoMes)}</td>${aparte?`<td class="n">${eur(p.R.brutoExtra)}</td>`:''}
       <td class="n sep">${textoTipo(p.R,P)}</td><td class="n sep">${eur(p.R.netoMes)}</td>
-      ${aparte?`<td class="n">${eur(p.R.netoExtra)}</td>`:''}<td class="n">${eur0(p.R.neto)}</td>
+      ${aparte?`<td class="n">${eur(p.R.netoExtra)}</td>`:''}${hayVar?`<td class="n">${eur(p.R.netoVar)}</td>`:''}<td class="n">${eur0(p.R.neto)}</td>
       <td class="n ${baja?'warn':''}">${d==null?'—':signo(d,eur)}</td></tr>`;
   });
   $('nRecorrido').innerHTML=h+'</tbody>';
@@ -1006,7 +1083,7 @@ function pintarNomina(P){
   $('sHeroExtra').textContent=eur(fin.R.netoExtra);
   $('sHeroExtraLab').textContent='líquido de cada paga extra'+(pasos.length>1?', frente a '+eur(pasos[0].R.netoExtra):'');
   $('sHeroBruto').textContent=eur0(fin.b);
-  $('sHeroBrutoLab').textContent=pasos.length>1?'bruto anual al final, desde '+eur0(P.salario0):'bruto anual';
+  $('sHeroBrutoLab').textContent=(pasos.length>1?'salario base anual al final, desde '+eur0(P.salario0):'salario base anual')+(hayVar?' (más '+eur0(P.variable)+' de variable)':'');
   $('sHeroGana').textContent=signo(fin.R.neto-pasos[0].R.neto,eur0);
   dibujarNeto(P,pasos);
 
@@ -1029,32 +1106,44 @@ function pintarNomina(P){
 function pintarLineas(P,R,aparte){
   const b=P.salario0, salBase=b/P.pagas;
   const baseCot=clampBase(b/12,P);
+  const baseVar=clampBase(b/12+R.v,P)-baseCot;
   const desglosar=Math.abs(P.tSS-0.065)<1e-6;
   const conceptos=desglosar
     ?[['Contingencias comunes',0.047],['Mecanismo de equidad intergeneracional (MEI)',0.0015],
       ['Desempleo',0.0155],['Formación profesional',0.001]]
     :[['Seguridad Social',P.tSS]];
-  const c2=aparte;
-  const cel=(a,x)=>'<td class="n">'+a+'</td>'+(c2?'<td class="n">'+(x==null?'—':x)+'</td>':'');
+  /* columnas: mensualidad, paga extra (si se cobra aparte) y variable (si hay) */
+  const C=[{h:aparte?'Mensualidad':'Cada mes',k:'mes'}];
+  if(aparte) C.push({h:'Paga extra',k:'extra'});
+  if(R.v>0) C.push({h:'Variable (febrero)',k:'var'});
+  const fila=(et,f,cl)=>'<tr class="'+(cl||'')+'"><td>'+et+'</td>'+C.map(c=>{const v=f(c.k);return '<td class="n">'+(v==null?'—':v)+'</td>';}).join('')+'</tr>';
+  const sec=t=>'<tr class="sec"><td colspan="'+(C.length+1)+'">'+t+'</td></tr>';
   const pctTxt=f=>nfx.format(f*100)+' %';
-  let h='<tr class="th"><td></td><td class="n">'+(c2?'Mensualidad':'Cada mes')+'</td>'+(c2?'<td class="n">Paga extra</td>':'')+'</tr>';
-  h+='<tr class="sec"><td colspan="'+(c2?3:2)+'">Devengos</td></tr>';
-  h+='<tr><td>Salario base</td>'+cel(eur(salBase),eur(salBase))+'</tr>';
-  if(P.pagas===14&&P.prorr) h+='<tr><td>Prorrata de pagas extras <span class="tag">2 × '+eur(salBase)+' ÷ 12</span></td>'+cel(eur(salBase*2/12))+'</tr>';
-  h+='<tr class="total"><td>Total devengado</td>'+cel(eur(R.brutoMes),eur(R.brutoExtra))+'</tr>';
-  h+='<tr class="sec"><td colspan="'+(c2?3:2)+'">Bases</td></tr>';
-  h+='<tr><td>Base de cotización <span class="tag">'+(P.pagas===14?'incluye la prorrata de extras':'')+
-    (baseCot!==b/12?(baseCot===P.bMax?' · topada en la máxima':' · subida a la mínima'):'')+'</span></td>'+cel(eur(baseCot),'no cotiza')+'</tr>';
-  h+='<tr><td>Base de retención IRPF</td>'+cel(eur(R.brutoMes),eur(R.brutoExtra))+'</tr>';
-  h+='<tr class="sec"><td colspan="'+(c2?3:2)+'">Deducciones</td></tr>';
-  for(const [n,t] of conceptos) h+='<tr class="neg"><td>'+n+' <span class="tag">'+pctTxt(t)+'</span></td>'+cel('−'+eur(baseCot*t),null)+'</tr>';
-  h+='<tr class="neg"><td>IRPF <span class="tag">'+textoTipo(R,P)+'</span></td>'+cel('−'+eur(R.irpfMes),'−'+eur(R.irpfExtra))+'</tr>';
-  h+='<tr class="neg"><td>Total deducciones</td>'+cel('−'+eur(R.ss+R.irpfMes),'−'+eur(R.irpfExtra))+'</tr>';
-  h+='<tr class="total"><td>Líquido a percibir</td>'+cel(eur(R.netoMes),eur(R.netoExtra))+'</tr>';
+  const dev={mes:R.brutoMes,extra:R.brutoExtra,var:R.v};
+  const irpf={mes:R.irpfMes,extra:R.irpfExtra,var:R.irpfVar};
+  const bss={mes:baseCot,extra:0,var:baseVar};
+  const neto={mes:R.netoMes,extra:R.netoExtra,var:R.netoVar};
+  let h='<tr class="th"><td></td>'+C.map(c=>'<td class="n">'+c.h+'</td>').join('')+'</tr>';
+  h+=sec('Devengos');
+  h+=fila('Salario base',k=>k==='var'?null:eur(salBase));
+  if(P.pagas===14&&P.prorr) h+=fila('Prorrata de pagas extras <span class="tag">2 × '+eur(salBase)+' ÷ 12</span>',k=>k==='mes'?eur(salBase*2/12):null);
+  if(R.v>0) h+=fila('Variable <span class="tag">íntegro, sin prorratear</span>',k=>k==='var'?eur(R.v):null);
+  h+=fila('Total devengado',k=>eur(dev[k]),'total');
+  h+=sec('Bases');
+  h+=fila('Base de cotización <span class="tag">'+(P.pagas===14?'incluye la prorrata de extras':'')+
+    (baseCot!==b/12?(baseCot===P.bMax?' · topada en la máxima':' · subida a la mínima'):'')+'</span>',
+    k=>k==='extra'?'no cotiza':k==='var'?(baseVar>0?'+'+eur(baseVar):'tope alcanzado'):eur(baseCot));
+  h+=fila('Base de retención IRPF',k=>eur(dev[k]));
+  h+=sec('Deducciones');
+  for(const [n,t] of conceptos) h+=fila(n+' <span class="tag">'+pctTxt(t)+'</span>',k=>bss[k]>0?'−'+eur(bss[k]*t):null,'neg');
+  h+=fila('IRPF <span class="tag">'+textoTipo(R,P)+'</span>',k=>'−'+eur(irpf[k]),'neg');
+  h+=fila('Total deducciones',k=>'−'+eur(bss[k]*P.tSS+irpf[k]),'neg');
+  h+=fila('Líquido a percibir',k=>eur(neto[k]),'total');
   $('nNomina').innerHTML=h;
   $('nNominaNota').innerHTML=(desglosar?'Cuotas del trabajador en 2026 con contrato indefinido. ':'')+
     'La empresa aporta además <b>'+eur(baseCot*P.tEmp)+'</b> al mes de cotización a su cargo.'+
-    (aparte?' La paga extra no cotiza cuando se cobra porque ya va prorrateada en la base de cada mes.':'');
+    (aparte?' La paga extra no cotiza cuando se cobra porque ya va prorrateada en la base de cada mes.':'')+
+    (R.v>0?' El variable se suma a la base de cotización de febrero, hasta la base máxima, y su IRPF va al mismo tipo que el resto porque cuenta para calcularlo.':'');
 }
 
 /* ---------------- ESTANCIA ---------------- */
@@ -1069,9 +1158,13 @@ function pintarEstancia(P){
   if(err)return;
 
   const anios=[];
-  for(let y=s.y;y<=r.y;y++) anios.push({con:simularAnio(P,y,true),sin:simularAnio(P,y,false)});
+  for(let y=s.y;y<=r.y;y++){
+    const sin=simularAnio(P,y,false);
+    anios.push({con:aplicarTope(simularAnio(P,y,true),sin,P),sin});
+  }
   const mesesCon=anios.flatMap(a=>a.con.meses), mesesSin=anios.flatMap(a=>a.sin.meses);
   const TC=totales(mesesCon,P), TS=totales(mesesSin,P);
+  TC.comp=anios.reduce((a,x)=>a+x.con.comp,0); TC.neto+=TC.comp;
 
   /* hero */
   let idx=mesesCon.map((M,k)=>k).filter(k=>mesesCon[k].D.sit==='destino');
@@ -1098,15 +1191,37 @@ function pintarEstancia(P){
   let h='<tr class="th"><td></td><td class="n">Sin desplazamiento</td><td class="n">Con desplazamiento</td><td class="n">Diferencia</td></tr>';
   h+=fila('Mensualidades (salario)',TS.sal,TC.sal);
   if(P.pagas===14) h+=fila('Pagas extras'+(P.prorr?' <span class="tag">prorrateadas</span>':''),TS.extra,TC.extra);
+  if(P.variable>0) h+=fila('Variable <span class="tag">febrero</span>',TS.variable,TC.variable);
   h+=fila('Plus de desplazamiento',TS.plus,TC.plus);
   h+=fila('Dieta de manutención <span class="tag">exenta</span>',TS.dieta,TC.dieta);
   h+=fila('Total devengado',TS.dev,TC.dev);
   h+=fila('IRPF retenido <span class="tag">'+pct(TS.tipoEf*100)+' → '+pct(TC.tipoEf*100)+'</span>',TS.irpf,TC.irpf,'neg',true);
+  if(P.tope) h+=fila('Compensación IDOM <span class="tag">tope España</span>',0,TC.comp);
   h+=fila('Seguridad Social',TS.ss,TC.ss,'neg',true);
   h+=fila('Líquido total',TS.neto,TC.neto,'total');
   $('eResumen').innerHTML=h;
+
+  /* residencia fiscal por año */
+  let ha='<tr class="th"><td>Año</td><td class="n">Días fuera</td><td class="n">Días en España</td><td>Situación fiscal</td>'+
+    '<td class="n">IRPF sin desplazamiento</td><td class="n">IRPF retenido</td>'+(P.tope?'<td class="n">Compensación IDOM</td>':'')+
+    '<td class="n">IRPF que pagas</td></tr>';
+  for(const a of anios){
+    const R=a.con.res, irpfPagas=a.con.tot.irpf-a.con.comp;
+    const sit=R.noRes?'<span class="pill nores">No residente · sin IRPF</span>'
+      :'<span class="pill res">Residente en España</span>';
+    ha+=`<tr><td>${a.con.y}</td><td class="n">${R.fuera}</td><td class="n">${R.espana}</td><td>${sit}</td>
+      <td class="n">${eur(a.sin.tot.irpf)}</td><td class="n">${eur(a.con.tot.irpf)}</td>
+      ${P.tope?`<td class="n ${a.con.comp>0?'pos':''}">${a.con.comp>0?'+'+eur(a.con.comp):'—'}</td>`:''}
+      <td class="n b">${eur(irpfPagas)}</td></tr>`;
+  }
+  $('eAnios').innerHTML=ha;
+  $('eAniosNota').innerHTML=(P.regla183
+      ?'<b>Menos de 183 días en España</b> en un año natural: no eres residente fiscal ese año y la nómina no lleva IRPF en ninguno de sus meses. Los días se cuentan como días naturales entre la salida y el regreso. '
+      :'La regla de los 183 días está desactivada: todos los años tributan en España. ')+
+    (P.tope?'<b>Años de residente:</b> IDOM compensa para que no pagues más IRPF que quedándote en España; la diferencia se abona al cerrar el año. ':'')+
+    'Las dietas no cuentan para el tipo; el plus y el variable, sí.';
   $('eResNota').innerHTML='Los meses antes de la salida y después del regreso llevan el sueldo de origen, y cuentan para el tipo de IRPF de cada año. '+
-    'Al desplazarte sube la base anual, así que la retención se regulariza: el tipo de los meses fuera es mayor que el de los meses en casa.'+
+    'Las dietas no entran en la base de IRPF.'+
     (P.irpf==='tabla'||P.irpf==='prog'?' Tipo efectivo en todo el periodo: <b>'+pct(TS.tipoEf*100)+'</b> sin desplazamiento, <b>'+pct(TC.tipoEf*100)+'</b> con él.':'');
 
   /* calendario por años */
@@ -1118,7 +1233,12 @@ function pintarEstancia(P){
 function tablaAnio(A,P,est,soloAnio,sin){
   const aparte=P.pagas===14&&!P.prorr;
   const T=A.tot;
-  let h='<div class="yh">'+(soloAnio?'':'<b>'+A.y+'</b>')+'</div>';
+  let cab='';
+  if(est&&A.res){
+    cab='<span class="tag">'+A.res.fuera+' días fuera · '+A.res.espana+' en España</span> '+
+      (A.res.noRes?'<span class="pill nores">No residente · sin IRPF</span>':'<span class="pill res">Residente</span>');
+  }
+  let h='<div class="yh">'+(soloAnio?'':'<b>'+A.y+'</b>')+'<span>'+cab+'</span></div>';
   h+='<div class="scrollx"><table class="cal"><thead><tr><th>Mes</th>'+
     (est?'<th>Situación</th><th class="n">Días</th>':'')+
     '<th class="n">Salario</th>'+(P.prorr?'<th class="n">Extra prorr.</th>':'')+
@@ -1140,26 +1260,40 @@ function tablaAnio(A,P,est,soloAnio,sin){
       (P.prorr?`<td class="n">${eur(M.extra)}</td>`:'')+
       (est?`<td class="n">${M.plus?eur(M.plus):'—'}</td><td class="n">${M.dieta?eur(M.dieta):'—'}</td>`:'')+
       `<td class="n">${eur(M.brutoMes)}</td><td class="n">${pct(M.tipo*100)}</td>`+
-      `<td class="n neg">−${eur(M.irpfMes)}</td><td class="n neg">−${eur(M.ss)}</td><td class="n b">${eur(M.netoMes)}</td></tr>`;
+      `<td class="n neg">${menos(M.irpfMes)}</td><td class="n neg">−${eur(M.ss)}</td><td class="n b">${eur(M.netoMes)}</td></tr>`;
     if(aparte&&M.extraInfo){
       h+=`<tr class="extra"><td colspan="${est?3:1}">Paga extra <span class="tag">${M.extraInfo}</span></td>`+
         `<td class="n">${eur(M.extra)}</td>`+(est?'<td class="n">—</td><td class="n">—</td>':'')+
         `<td class="n">${eur(M.extra)}</td><td class="n">${pct(M.tipo*100)}</td>`+
-        `<td class="n neg">−${eur(M.irpfExtra)}</td><td class="n">—</td><td class="n b">${eur(M.netoExtra)}</td></tr>`;
+        `<td class="n neg">${menos(M.irpfExtra)}</td><td class="n">—</td><td class="n b">${eur(M.netoExtra)}</td></tr>`;
     }
+    if(M.variable>0){
+      h+=`<tr class="extra"><td colspan="${est?3:1}">Variable <span class="tag">íntegro en febrero</span></td>`+
+        `<td class="n">${eur(M.variable)}</td>`+(P.prorr?'<td class="n">—</td>':'')+(est?'<td class="n">—</td><td class="n">—</td>':'')+
+        `<td class="n">${eur(M.variable)}</td><td class="n">${pct(M.tipo*100)}</td>`+
+        `<td class="n neg">${menos(M.irpfVar)}</td><td class="n neg">${M.ssVar>0?'−'+eur(M.ssVar):'—'}</td><td class="n b">${eur(M.netoVar)}</td></tr>`;
+    }
+  }
+  if(A.comp>0){
+    const span=(est?3:1);
+    const antes=1+(P.prorr?1:0)+(est?2:0)+1+1;
+    h+=`<tr class="extra"><td colspan="${span}">Compensación IDOM <span class="tag">tope de IRPF de España</span></td>`+
+      `<td colspan="${antes}"></td><td class="n pos">+${eur(A.comp)}</td><td></td><td class="n b">+${eur(A.comp)}</td></tr>`;
   }
   h+='</tbody><tfoot><tr><td'+(est?' colspan="2"':'')+'>Total '+A.y+'</td>'+
     (est?`<td class="n">${nf0.format(T.dias)}</td>`:'')+
-    `<td class="n">${eur(T.sal+(aparte?T.extra:0))}</td>`+(P.prorr?`<td class="n">${eur(T.extra)}</td>`:'')+
+    `<td class="n">${eur(T.sal+(aparte?T.extra:0)+T.variable)}</td>`+(P.prorr?`<td class="n">${eur(T.extra)}</td>`:'')+
     (est?`<td class="n">${eur(T.plus)}</td><td class="n">${eur(T.dieta)}</td>`:'')+
     `<td class="n">${eur(T.dev)}</td><td class="n">${pct(T.tipoEf*100)}</td>`+
-    `<td class="n">−${eur(T.irpf)}</td><td class="n">−${eur(T.ss)}</td><td class="n">${eur(T.neto)}</td></tr></tfoot></table></div>`;
+    `<td class="n">${menos(T.irpf-(A.comp||0))}</td><td class="n">−${eur(T.ss)}</td><td class="n">${eur(T.neto)}</td></tr></tfoot></table></div>`;
 
   const partes=[];
   partes.push('Mensualidades: bruto <b>'+eur0(T.sal+(P.prorr?T.extra:0)+T.plus)+'</b>, líquido <b>'+eur0(T.netoMes-T.dieta)+'</b>'+
     (T.dieta?' + '+eur0(T.dieta)+' de dietas':''));
   if(aparte) partes.push('Pagas extras: bruto <b>'+eur0(T.extra)+'</b>, líquido <b>'+eur0(T.netoExtra)+'</b>');
   if(P.prorr) partes.push('Extras prorrateadas dentro de cada mes: <b>'+eur0(T.extra)+'</b>');
+  if(T.variable>0) partes.push('Variable: bruto <b>'+eur0(T.variable)+'</b>, líquido <b>'+eur0(T.netoVar)+'</b>');
+  if(A.comp>0) partes.push('Compensación IDOM <b>+'+eur0(A.comp)+'</b>');
   partes.push('Tipo efectivo del año <b>'+pct(T.tipoEf*100)+'</b>');
   if(sin) partes.push('Frente a quedarte: <b>'+signo(T.neto-sin.tot.neto,eur0)+'</b> líquidos');
   h+='<div class="resumen-anio">'+partes.map(x=>'<span>'+x+'</span>').join('')+'</div>';
@@ -1265,11 +1399,12 @@ function dibujarEstancia(con,sin){
 /* ============================================================
    GUARDAR / CARGAR / EXCEL
    ============================================================ */
-const CAMPOS=['importe','extra1','extra2','origen','destino','salida','regreso','diasDef','anio',
+const CHECKS=['nuclear','regla183','tope'];
+const CAMPOS=['importe','variable','extra1','extra2','origen','destino','salida','regreso','diasDef','anio',
   'irpfManual','desc','disc','tipoSS','tipoEmp','baseMin','baseMax'];
 function estado(){
   const c={}; CAMPOS.forEach(id=>c[id]=$(id).value);
-  c.nuclear=$('nuclear').checked;
+  CHECKS.forEach(id=>c[id]=$(id).checked);
   return {version:1,S:JSON.parse(JSON.stringify(S)),campos:c};
 }
 function aplicarEstado(st){
@@ -1285,7 +1420,7 @@ function aplicarEstado(st){
   S.overrides=(s.overrides&&typeof s.overrides==='object')?s.overrides:{};
   const c=st.campos||{};
   CAMPOS.forEach(id=>{ if(c[id]!=null) $(id).value=c[id]; });
-  $('nuclear').checked=!!c.nuclear;
+  CHECKS.forEach(id=>{ if(c[id]!=null) $(id).checked=!!c[id]; });
   syncSegs(); pintarSubidas(); calc();
 }
 function guardarLocal(){ try{ localStorage.setItem('idom-nomina-estancia',JSON.stringify(estado())); }catch(e){} }
@@ -1336,7 +1471,7 @@ $('btnExcel').addEventListener('click',()=>{
   const par=[
     ['Calculadora de nómina y estancias · IDOM Bizkaia'],['Generado',new Date().toLocaleDateString('es-ES')],[],
     ['Modo',{desglose:'Desglose de nómina',subidas:'Subidas de sueldo',estancia:'Estancia'}[S.mode]],
-    ['Salario bruto anual actual',P.salario0],['Pagas',P.pagas],
+    ['Salario base bruto anual',P.salario0],['Variable anual (febrero)',P.variable],['Pagas',P.pagas],
     ['Pagas extras',P.pagas===14?(P.prorr?'Prorrateadas':'Aparte, en '+P.extraMeses.map(m=>MESES_L[m-1]).join(' y ')):'—'],
     ['IRPF',{tabla:'Tabla foral Bizkaia 2026',prog:'Por tramos (simulación)',manual:'Manual',zero:'0 %'}[P.irpf]],
     ['Descendientes',P.desc],['Cuota obrera SS',P.tSS],
@@ -1346,13 +1481,14 @@ $('btnExcel').addEventListener('click',()=>{
   if(S.mode==='estancia'){
     par.push(['Origen',P.origen],['Destino',P.destino],['Central nuclear',P.nuclear?'Sí':'No'],
       ['Salida',$('salida').value],['Regreso',$('regreso').value],['Días/mes en destino',P.diasDef],
-      ['Dieta diaria',P.dietaDia],['% plus',P.pctPlus]);
+      ['Dieta diaria',P.dietaDia],['% plus',P.pctPlus],
+      ['Regla de 183 días',P.regla183?'Sí':'No'],['Tope IRPF de España (IDOM)',P.tope?'Sí':'No']);
   }
   XLSX.utils.book_append_sheet(wb,hoja(par,[34,26],(r,c)=>{
     if(c!==1)return null;
     const l=String(par[r][0]||'');
     if(/Subida|Cuota|Tipo manual|% plus/.test(l))return PCT;
-    if(/Salario|Dieta diaria/.test(l))return EUR;
+    if(/Salario|Variable|Dieta diaria/.test(l))return EUR;
     return null;
   }),'Parámetros');
 
@@ -1360,7 +1496,7 @@ $('btnExcel').addEventListener('click',()=>{
   if(S.mode!=='estancia') anios=[simularAnio(P,S.mode==='subidas'?P.anio:new Date().getFullYear(),false)];
   else{
     if(!P.salida||!P.regreso){ alert('Revisa las fechas de la estancia.'); return; }
-    anios=[]; for(let y=P.salida.y;y<=P.regreso.y;y++) anios.push(simularAnio(P,y,true));
+    anios=[]; for(let y=P.salida.y;y<=P.regreso.y;y++) anios.push(aplicarTope(simularAnio(P,y,true),simularAnio(P,y,false),P));
   }
   const cal=[['Año','Mes','Concepto','Situación','Días destino','Salario','Extra','Plus','Dieta','Devengado','Tipo IRPF','IRPF','SS','Líquido']];
   for(const A of anios) for(const M of A.meses){
@@ -1368,26 +1504,31 @@ $('btnExcel').addEventListener('click',()=>{
       M.brutoMes,M.tipo,-M.irpfMes,-M.ss,M.netoMes]);
     if(!P.prorr&&M.extraInfo)
       cal.push([M.y,MESES_L[M.m-1],'Paga extra',M.extraInfo,'',0,M.extra,0,0,M.extra,M.tipo,-M.irpfExtra,0,M.netoExtra]);
+    if(M.variable>0)
+      cal.push([M.y,MESES_L[M.m-1],'Variable','íntegro en febrero','',M.variable,0,0,0,M.variable,M.tipo,-M.irpfVar,-M.ssVar,M.netoVar]);
+    if(M.m===12&&A.comp>0)
+      cal.push([M.y,'','Compensación IDOM','tope IRPF de España','',0,0,0,0,0,'',A.comp,0,A.comp]);
   }
   XLSX.utils.book_append_sheet(wb,hoja(cal,[6,11,13,22,8,12,12,12,12,12,9,12,12,12],
     (r,c)=>r===0?null:c===10?PCT:(c>=5?EUR:null)),'Mes a mes');
 
   if(S.mode==='subidas'){
-    const rows=[['Momento','Desde','Bruto anual','Mensualidad bruta','Extra bruta','Tipo IRPF','Líquido mensualidad','Líquido extra','Líquido anual']];
+    const rows=[['Momento','Desde','Salario base anual','Mensualidad bruta','Extra bruta','Tipo IRPF','Líquido mensualidad','Líquido extra','Líquido variable','Líquido anual']];
     let b=P.salario0;
-    const add=(et,desde)=>{const R=motor(b,P);rows.push([et,desde,b,R.brutoMes,R.brutoExtra,R.tipo,R.netoMes,R.netoExtra,R.neto]);};
+    const add=(et,desde)=>{const R=motor(b,P);rows.push([et,desde,b,R.brutoMes,R.brutoExtra,R.tipo,R.netoMes,R.netoExtra,R.netoVar,R.neto]);};
     add('Hoy','');
     P.subidas.forEach((s,k)=>{ b*=1+s.pct/100; add('Subida '+(k+1)+' (+'+s.pct+' %)',ymKey(s.i)); });
-    XLSX.utils.book_append_sheet(wb,hoja(rows,[20,10,14,16,14,10,18,14,14],
+    XLSX.utils.book_append_sheet(wb,hoja(rows,[20,10,16,16,14,10,18,14,14,14],
       (r,c)=>r===0?null:c===5?PCT:(c>=2?EUR:null)),'Subidas');
   }else if(S.mode==='estancia'){
     const con=anios.flatMap(a=>a.meses);
     const sinM=[]; for(let y=P.salida.y;y<=P.regreso.y;y++) sinM.push(...simularAnio(P,y,false).meses);
     const TC=totales(con,P), TS=totales(sinM,P);
+    TC.comp=anios.reduce((a,x)=>a+x.comp,0); TC.neto+=TC.comp;
     const rows=[['Concepto','Sin desplazamiento','Con desplazamiento','Diferencia']];
-    [['Mensualidades',TS.sal,TC.sal],['Pagas extras',TS.extra,TC.extra],['Plus',TS.plus,TC.plus],
-     ['Dieta (exenta)',TS.dieta,TC.dieta],['Total devengado',TS.dev,TC.dev],['IRPF',-TS.irpf,-TC.irpf],
-     ['Seguridad Social',-TS.ss,-TC.ss],['Líquido total',TS.neto,TC.neto]]
+    [['Mensualidades',TS.sal,TC.sal],['Pagas extras',TS.extra,TC.extra],['Variable',TS.variable,TC.variable],['Plus',TS.plus,TC.plus],
+     ['Dieta (exenta)',TS.dieta,TC.dieta],['Total devengado',TS.dev,TC.dev],['IRPF retenido',-TS.irpf,-TC.irpf],
+     ['Compensación IDOM',0,TC.comp],['Seguridad Social',-TS.ss,-TC.ss],['Líquido total',TS.neto,TC.neto]]
       .forEach(([l,a,b])=>rows.push([l,a,b,b-a]));
     XLSX.utils.book_append_sheet(wb,hoja(rows,[24,20,20,16],(r,c)=>r&&c?EUR:null),'Resumen estancia');
   }
@@ -1404,7 +1545,7 @@ seg('segImporte','modoImporte');
 seg('segPagas','pagas',Number);
 seg('segCobro','cobroExtra');
 seg('segIrpf','irpf');
-['importe','extra1','extra2','origen','destino','nuclear','salida','regreso','diasDef','anio',
+['importe','variable','regla183','tope','extra1','extra2','origen','destino','nuclear','salida','regreso','diasDef','anio',
  'irpfManual','desc','disc','tipoSS','tipoEmp','baseMin','baseMax']
   .forEach(id=>$(id).addEventListener(id==='salida'||id==='regreso'||id==='anio'?'change':'input',calc));
 ['salida','regreso','anio'].forEach(id=>$(id).addEventListener('input',()=>{ if($(id).value.length>=4) calc(); }));
