@@ -343,7 +343,7 @@
         <div class="hint">Se puede cambiar mes a mes en la tabla del calendario. Las dietas no cuentan para el tipo de IRPF.</div>
       </div>
       <div class="field">
-        <label class="check"><input type="checkbox" id="regla183" checked> Sin IRPF el año natural en que estás menos de 183 días fuera</label>
+        <label class="check"><input type="checkbox" id="regla183" checked> Año con menos de 183 días fuera: lo cobrado fuera no paga IRPF; lo cobrado en España, sí</label>
       </div>
       <div class="field">
         <label class="check"><input type="checkbox" id="tope" checked> Con 183 días o más fuera, tributa, pero IDOM compensa para que no pagues más IRPF que quedándote en España</label>
@@ -603,7 +603,7 @@
       <p><b>IRPF.</b> Tabla general de retenciones sobre trabajo personal de la Diputación Foral de Bizkaia vigente desde el 01/01/2026, con descendientes y reducciones por discapacidad. En el calendario la retención se regulariza cada mes: el tipo se recalcula con lo cobrado en el año y lo que queda por cobrar en las condiciones de ese mes, igual que hace la nómina cuando cambia el sueldo o te desplazas. El modo por tramos no existe en la normativa foral, solo sirve de contraste.</p>
       <p><b>Seguridad Social.</b> Cuota obrera del 6,50 % (contingencias comunes 4,70 + MEI 0,15 + desempleo, FOGASA y formación 1,65). La base mensual incluye la prorrata de las extras y el plus, con los topes mínimo y máximo, así que las extras no cotizan en el mes en que se cobran.</p>
       <p><b>Desplazamiento.</b> Plus = salario anual ÷ 365 × % × días en destino, con un 15 % de base, más la diferencia de porcentaje si el destino tiene más que el origen, y +10 % en central nuclear. Las dietas de manutención son netas y exentas de IRPF y SS dentro de los límites del art. 13 NF 13/2013; el alojamiento lo paga IDOM directamente y no aparece. Las pagas extras solo llevan salario base, sin plus ni dietas.</p>
-      <p><b>Residencia fiscal y tope de IDOM.</b> Si en un año natural estás menos de 183 días fuera (días naturales entre la salida y el regreso), ese año no se retiene IRPF. Si estás 183 días o más fuera, ese año tributa e IDOM compensa la diferencia para que no pagues más IRPF que si te hubieras quedado en España. Las dietas nunca cuentan para el tipo de retención.</p>
+      <p><b>Residencia fiscal y tope de IDOM.</b> Si en un año natural estás menos de 183 días fuera (días naturales entre la salida y el regreso), lo cobrado fuera ese año no paga IRPF y lo cobrado en España sí, al tipo que sale de todo el año. Si estás 183 días o más fuera, ese año tributa e IDOM compensa la diferencia para que no pagues más IRPF que si te hubieras quedado en España. Las dietas nunca cuentan para el tipo de retención.</p>
       <p><b>Variable.</b> Se cobra íntegro en febrero, sin prorratear ni entrar en las extras ni en el plus. Suma para calcular el tipo de IRPF de todo el año y cotiza en febrero hasta la base máxima.</p>
       <p>Cálculo orientativo. La retención es un pago a cuenta: la cuota definitiva sale en la declaración y puede haber exenciones por trabajos en el extranjero que aquí no se aplican.</p>
     </footer>
@@ -855,45 +855,67 @@ function simularAnio(P,y,est){
                 subida:P.subidas.find(s=>s.i===i)});
   }
 
-  /* IRPF con regularización mensual */
-  let retenido=0, acum=0;
+  /* IRPF con regularización mensual.
+     Año con menos de 183 días fuera: lo cobrado fuera (salario de esos días, plus y la parte
+     de extras y variable) no tributa; lo cobrado en España sí. El tipo sale de todo el año. */
+  const ex=RES.noRes;
+  const fa=i=>{
+    if(!ex)return 0;
+    const y0=Math.floor(i/12), m0=i%12+1, dim=diasMes(y0,m0);
+    const a=Math.max(diaNum(P.salida.y,P.salida.m,P.salida.d),diaNum(y0,m0,1));
+    const b=Math.min(diaNum(P.regreso.y,P.regreso.m,P.regreso.d),diaNum(y0,m0,dim));
+    return Math.max(0,b-a+1)/dim;
+  };
+  const raV=ex?RES.fuera/(RES.fuera+RES.espana):0;
+  let retenido=0, acum=0, acumTax=0;
   for(const M of meses){
     /* las dietas no cuentan para el IRPF; el variable sí */
     const suj=M.salMes+M.extra+M.plus+M.variable;
+    const f=fa(M.i);
+    let fExt=1;
+    if(ex){
+      if(P.prorr) fExt=1-f;
+      else if(M.extraInfo){ const per=periodoExtra(P,M.i); fExt=1-per.reduce((a,k)=>a+fa(k),0)/per.length; }
+    }
+    const salTax=M.salMes*(1-f), plusTax=ex?0:M.plus, extTax=M.extra*fExt, varTax=M.variable*(1-raV);
+    const sujTax=salTax+plusTax+extTax+varTax;
     let tipo;
-    if(P.irpf==='zero'||RES.noRes) tipo=0;
+    if(P.irpf==='zero') tipo=0;
     else if(P.irpf==='manual') tipo=P.irpfManual;
     else{
       /* lo que queda del año, suponiendo que las condiciones de este mes se mantienen */
       const salCur=M.salMes;
       const plusCur=M.D.fin?M.sa/365*P.pctPlus*P.diasDef:0;
-      let fut=0;
+      const fueraFut=ex&&M.D.fin;
+      let fut=0, futTax=0;
       for(let j=M.m+1;j<=12;j++){
         fut+=salCur+plusCur+(j===2?P.variable:0);
+        futTax+=(fueraFut?0:salCur)+(ex?0:plusCur)+(j===2?P.variable*(1-raV):0);
         if(P.pagas===14){
-          if(P.prorr) fut+=salCur/largoPeriodo(P,j);
-          else if(P.extraMeses.includes(j)) fut+=salCur;
+          const e=P.prorr?salCur/largoPeriodo(P,j):(P.extraMeses.includes(j)?salCur:0);
+          fut+=e; futTax+=fueraFut?0:e;
         }
       }
-      const proj=acum+suj+fut;
-      const objetivo=retencionAnual(proj,P);
-      const resto=suj+fut;
-      tipo=resto>0?Math.max(0,(objetivo-retenido)/resto):0;
+      const proj=acum+suj+fut, projTax=acumTax+sujTax+futTax;
+      const r=proj>0?retencionAnual(proj,P)/proj:0;
+      const resto=sujTax+futTax;
+      tipo=resto>0?Math.max(0,(r*projTax-retenido)/resto):0;
       M.proj=proj;
     }
+    M.sujTax=sujTax;
     const baseMes=M.salMes+M.plus+(P.prorr?M.extra:0);
     const baseExtra=P.prorr?0:M.extra;
     M.tipo=tipo;
-    M.irpfMes=baseMes*tipo;
-    M.irpfExtra=baseExtra*tipo;
-    M.irpfVar=M.variable*tipo;
+    M.irpfMes=(salTax+plusTax+(P.prorr?extTax:0))*tipo;
+    M.irpfExtra=(P.prorr?0:extTax)*tipo;
+    M.irpfVar=varTax*tipo;
     M.irpf=M.irpfMes+M.irpfExtra+M.irpfVar;
     M.brutoMes=baseMes+M.dieta;
     M.netoMes=baseMes+M.dieta-M.irpfMes-M.ss;
     M.netoExtra=baseExtra-M.irpfExtra;
     M.netoVar=M.variable-M.irpfVar-M.ssVar;
     M.neto=M.netoMes+M.netoExtra+M.netoVar;
-    retenido+=M.irpf; acum+=suj;
+    retenido+=M.irpf; acum+=suj; acumTax+=sujTax;
   }
   return {y,meses,res:RES,comp:0,tot:totales(meses,P)};
 }
@@ -1226,7 +1248,8 @@ function porcionEstancia(con,sin,P){
     const acr=P.pagas===14?M.salMes/largoPeriodo(P,M.m):0;
     const acrS=P.pagas===14?Ms.salMes/largoPeriodo(P,M.m):0;
     const sal=M.salMes*f, ext=acr*f, suj=sal+ext+M.plus;
-    const irpf=M.tipo*suj, ss=Math.max(0,M.ss-Ms.ss*(1-f));
+    const tax=con.res.noRes?(sal+ext)*(enPer-nat)/enPer:suj;
+    const irpf=M.tipo*tax, ss=Math.max(0,M.ss-Ms.ss*(1-f));
     const neto=suj+M.dieta-irpf-ss;
     const salS=Ms.salMes*f, extS=acrS*f, irpfS=Ms.tipo*(salS+extS), ssS=Ms.ss*f;
     const netoS=salS+extS-irpfS-ssS;
@@ -1240,7 +1263,8 @@ function porcionEstancia(con,sin,P){
     const diasAnio=con.res.fuera+con.res.espana;
     const ra=T.periodo/diasAnio;
     const F=con.meses[1], Fs=sin.meses[1], v=P.variable*ra;
-    vr={v,ra,tipo:F.tipo,irpf:F.tipo*v,ss:F.ssVar*ra};
+    const vTax=con.res.noRes?v*(1-T.fuera/Math.max(1,T.periodo)):v;
+    vr={v,ra,tipo:F.tipo,irpf:F.tipo*vTax,ss:F.ssVar*ra};
     vr.neto=v-vr.irpf-vr.ss;
     const irpfS=Fs.tipo*v, ssS=Fs.ssVar*ra;
     vr.netoS=v-irpfS-ssS;
@@ -1321,7 +1345,7 @@ function pintarEstancia(P){
     kpi(eur0(T.sal+T.ext+T.variable),S.periodo==='custom'?'salario del periodo':'salario de la estancia','base '+eur0(T.sal)+' · extras '+eur0(T.ext)+(T.variable?' · variable '+eur0(T.variable):''))+
     kpi(eur0(T.plus+T.dieta),'plus y dietas','plus '+eur0(T.plus)+' · dietas exentas '+eur0(T.dieta))+
     kpi(eur0(irpfPaga),'IRPF que pagas',(T.suj>0?pct(irpfPaga/T.suj*100)+' de lo que tributa':'')+
-      (noRes.length?' · sin IRPF en '+noRes.join(', '):''))+
+      (noRes.length?' · lo de fuera sin IRPF en '+noRes.join(', '):''))+
     kpi(eur0(T.ss),'Seguridad Social',pct(P.tSS*100)+' sobre la base de cotización');
 
   /* desglose */
@@ -1353,7 +1377,7 @@ function pintarEstancia(P){
     '<td class="n">IRPF del año que pagas</td></tr>';
   for(const a of E.anios){
     const R=a.res, irpfPagas=a.con.tot.irpf-a.comp;
-    const sit=R.noRes?'<span class="pill nores">Menos de 183 días fuera · sin IRPF</span>'
+    const sit=R.noRes?'<span class="pill nores">Menos de 183 días fuera · lo de fuera sin IRPF</span>'
       :'<span class="pill res">183 días o más fuera · tributa</span>';
     ha+=`<tr><td>${a.y}</td><td class="n">${R.fuera}</td><td class="n">${R.espana}</td><td>${sit}</td>
       <td class="n">${eur(a.sin.tot.irpf)}</td><td class="n">${eur(a.con.tot.irpf)}</td>
@@ -1362,7 +1386,7 @@ function pintarEstancia(P){
   }
   $('eAnios').innerHTML=ha;
   $('eAniosNota').innerHTML=(P.regla183
-      ?'Si un año natural estás <b>menos de 183 días fuera</b>, ese año no se retiene IRPF. Si estás <b>183 días o más fuera</b>, ese año tributa. '
+      ?'Si un año natural estás <b>menos de 183 días fuera</b>, lo que cobras mientras estás fuera (salario de esos días, plus y la parte de extras y variable) no paga IRPF; lo que cobras en España, sí, al tipo que sale de todo el año. Si estás <b>183 días o más fuera</b>, tributa todo. '
       :'La regla de los 183 días está desactivada: todos los años tributan. ')+
     (P.tope?'En los años que tributan, IDOM compensa para que no pagues más IRPF que quedándote en España; la diferencia se abona al cerrar el año. ':'')+
     'Esta tabla es del año completo, para ver de dónde sale el tipo.';
@@ -1384,7 +1408,7 @@ function tablaEstancia(E,P){
   for(const a of E.anios){
     const R=a.res;
     h+=`<tr class="yrow"><td colspan="${nc}">${a.y} <span class="tag">· ${R.fuera} días fuera, ${R.espana} en España</span> `+
-      (R.noRes?'<span class="pill nores">Menos de 183 días fuera · sin IRPF</span>':'<span class="pill res">183 días o más fuera · tributa</span>')+'</td></tr>';
+      (R.noRes?'<span class="pill nores">Menos de 183 días fuera · lo de fuera sin IRPF</span>':'<span class="pill res">183 días o más fuera · tributa</span>')+'</td></tr>';
     for(const F of a.filas){
       const M=F.M, D=M.D;
       const enEsp=D.sit==='antes'||D.sit==='despues';
@@ -1423,7 +1447,7 @@ function tablaAnio(A,P,est,soloAnio,sin){
   let cab='';
   if(est&&A.res){
     cab='<span class="tag">'+A.res.fuera+' días fuera · '+A.res.espana+' en España</span> '+
-      (A.res.noRes?'<span class="pill nores">Menos de 183 días fuera · sin IRPF</span>':'<span class="pill res">Tributa</span>');
+      (A.res.noRes?'<span class="pill nores">Menos de 183 días fuera · lo de fuera sin IRPF</span>':'<span class="pill res">Tributa</span>');
   }
   let h='<div class="yh">'+(soloAnio?'':'<b>'+A.y+'</b>')+'<span>'+cab+'</span></div>';
   h+='<div class="scrollx"><table class="cal"><thead><tr><th>Mes</th>'+
@@ -1865,7 +1889,7 @@ $('btnExcel').addEventListener('click',()=>{
       .forEach(([l,a,b])=>rows.push([l,a,b,a-b]));
     rows.push([],['Días naturales fuera',T.fuera],['Días en destino (plus y dietas)',T.dias]);
     const res=[['Año','Días fuera','Días en España','Situación','IRPF sin desplazarte','IRPF retenido','Compensación IDOM','IRPF que pagas']];
-    for(const a of E.anios) res.push([a.y,a.res.fuera,a.res.espana,a.res.noRes?'Menos de 183 días fuera: sin IRPF':'183 días o más fuera: tributa',
+    for(const a of E.anios) res.push([a.y,a.res.fuera,a.res.espana,a.res.noRes?'Menos de 183 días fuera: lo de fuera sin IRPF':'183 días o más fuera: tributa',
       a.sin.tot.irpf,a.con.tot.irpf,a.comp,a.con.tot.irpf-a.comp]);
     XLSX.utils.book_append_sheet(wb,hoja(rows,[32,16,16,16],(r,c)=>r&&c&&r<=10?EUR:null),'Desglose estancia');
     XLSX.utils.book_append_sheet(wb,hoja(res,[6,11,14,28,18,14,18,14],(r,c)=>r&&c>=4?EUR:null),'Residencia fiscal');
