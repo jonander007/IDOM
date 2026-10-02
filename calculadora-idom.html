@@ -95,6 +95,7 @@
   label.lab{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
   .hint{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4}
   .row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  .fechas-est{row-gap:12px;align-items:end}
   .row2 input[type=date]{padding:8px 6px;font-size:14px}
 
   input[type=number],input[type=date],input[type=month],input[type=text],select{
@@ -222,6 +223,7 @@
   body.m-comparador #form,
   body:not(.per-custom) .solo-custom,
   body:not(.con-est2) .solo-est2,
+  body.con-est2 .no-est2,
   body.m-desglose .no-desglose,
   body.m-estancia .no-estancia,
   body.p12 .solo-14,
@@ -324,23 +326,17 @@
         <label class="check"><input type="checkbox" id="nuclear"> Central nuclear (+10 % de plus)</label>
       </div>
       <div class="field">
-        <div class="row2">
-          <div><label class="lab" for="salida">Día de salida</label><input type="date" id="salida" value="2026-10-15"></div>
-          <div><label class="lab" for="regreso">Día de regreso</label><input type="date" id="regreso" value="2027-12-20"></div>
-        </div>
-        <div class="hint">El resto del año cobras el sueldo de origen.</div>
-      </div>
-      <div class="field">
         <label class="check"><input type="checkbox" id="est2"> Vuelta a España a mitad de la estancia</label>
       </div>
-      <div class="solo-est2">
-        <div class="field">
-          <div class="row2">
-            <div><label class="lab" for="vueltaEsp">Vuelves a España</label><input type="date" id="vueltaEsp" value="2027-04-01"></div>
-            <div><label class="lab" for="idaDeNuevo">Te vas de nuevo</label><input type="date" id="idaDeNuevo" value="2027-05-15"></div>
-          </div>
-          <div class="hint">Mismo destino, con un tramo en España en medio (por ejemplo Italia, España, Italia). Esos días cobras el sueldo español, sin plus ni dietas. La regla de los 183 días suma los dos tramos fuera.</div>
+      <div class="field">
+        <div class="row2 fechas-est">
+          <div><label class="lab" for="salida">Día de salida</label><input type="date" id="salida" value="2026-10-15"></div>
+          <div class="solo-est2"><label class="lab" for="vueltaEsp">Vuelves a España</label><input type="date" id="vueltaEsp" value="2027-04-01"></div>
+          <div class="solo-est2"><label class="lab" for="idaDeNuevo">Regresas a la estancia</label><input type="date" id="idaDeNuevo" value="2027-05-15"></div>
+          <div><label class="lab" for="regreso"><span class="no-est2">Día de regreso</span><span class="solo-est2">Vuelta definitiva</span></label><input type="date" id="regreso" value="2027-12-20"></div>
         </div>
+        <div class="hint no-est2">El resto del año cobras el sueldo de origen.</div>
+        <div class="hint solo-est2">Mismo destino, con un tramo en España en medio (por ejemplo Italia, España, Italia). En ese tramo cobras el sueldo español, sin plus ni dietas. La regla de los 183 días suma los dos tramos fuera.</div>
       </div>
       <div class="field">
         <label class="lab">Periodo a calcular</label>
