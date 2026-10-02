@@ -331,19 +331,15 @@
         <div class="hint">El resto del año cobras el sueldo de origen.</div>
       </div>
       <div class="field">
-        <label class="check"><input type="checkbox" id="est2"> Segunda estancia en el mismo periodo</label>
+        <label class="check"><input type="checkbox" id="est2"> Vuelta a España a mitad de la estancia</label>
       </div>
       <div class="solo-est2">
         <div class="field">
-          <label class="lab" for="destino2">Destino de la segunda estancia</label>
-          <select id="destino2"></select>
-        </div>
-        <div class="field">
           <div class="row2">
-            <div><label class="lab" for="salida2">Salida</label><input type="date" id="salida2" value="2028-02-01"></div>
-            <div><label class="lab" for="regreso2">Regreso</label><input type="date" id="regreso2" value="2028-05-31"></div>
+            <div><label class="lab" for="vueltaEsp">Vuelves a España</label><input type="date" id="vueltaEsp" value="2027-04-01"></div>
+            <div><label class="lab" for="idaDeNuevo">Te vas de nuevo</label><input type="date" id="idaDeNuevo" value="2027-05-15"></div>
           </div>
-          <div class="hint">Entre las dos estancias vuelves a España y cobras el sueldo español. La regla de los 183 días suma los días fuera de las dos.</div>
+          <div class="hint">Mismo destino, con un tramo en España en medio (por ejemplo Italia, España, Italia). Esos días cobras el sueldo español, sin plus ni dietas. La regla de los 183 días suma los dos tramos fuera.</div>
         </div>
       </div>
       <div class="field">
@@ -780,10 +776,16 @@ function leer(){
   const tramo=(d,a,b)=>{ const sa=parseFecha(a), rb=parseFecha(b);
     return {destino:d[0],dietaDia:d[1],pctPlus:plusDe(d),salida:sa,regreso:rb,
             a:sa?diaNum(sa.y,sa.m,sa.d):NaN,b:rb?diaNum(rb.y,rb.m,rb.d):NaN}; };
-  const estancias=[tramo(pd,$('salida').value,$('regreso').value)];
-  if($('est2').checked){
-    const pd2=PAISES.find(p=>p[0]===$('destino2').value)||pd;
-    estancias.push(tramo(pd2,$('salida2').value,$('regreso2').value));
+  /* una estancia; con vuelta intermedia a España, dos tramos al mismo destino */
+  let estancias=[tramo(pd,$('salida').value,$('regreso').value)];
+  const pausa=$('est2').checked;
+  if(pausa){
+    const v=parseFecha($('vueltaEsp').value), n=parseFecha($('idaDeNuevo').value);
+    const iso=x=>x?new Date((diaNum(x.y,x.m,x.d))*864e5).toISOString().slice(0,10):'';
+    const dia=(x,k)=>x?new Date((diaNum(x.y,x.m,x.d)+k)*864e5).toISOString().slice(0,10):'';
+    /* el día que vuelves ya estás en España; el día que te vas de nuevo ya estás fuera */
+    estancias=[tramo(pd,$('salida').value,dia(v,-1)),tramo(pd,iso(n),$('regreso').value)];
+    estancias.pausa={vuelta:v,ida:n};
   }
   const ult=estancias[estancias.length-1];
   const subidas=S.subidas
@@ -799,7 +801,7 @@ function leer(){
     tSS:num('tipoSS')/100,tEmp:num('tipoEmp')/100,bMin:num('baseMin'),bMax,
     subidas,
     origen:po[0],destino:pd[0],nuclear,dietaDia:pd[1],pctPlus,
-    estancias,
+    estancias,pausa:pausa?estancias.pausa:null,
     salida:estancias[0].salida,regreso:ult.regreso||estancias[0].regreso,
     diasDef:Math.max(0,Math.min(31,num('diasDef'))),
     anio:Math.round(num('anio'))||new Date().getFullYear(),
@@ -879,10 +881,10 @@ function situacion(P,y,m,est){
   return {dias,fin:!!finT,finT,sit,ov,d0:partes[0].d0,d1:partes[partes.length-1].d1,partes,dest:partes[0].t.destino};
 }
 function textoSituacion(D,P){
-  const varias=tramosOk(P).length>1;
-  const dest=varias&&D.dest?' · '+D.dest:'';
+  const dests=new Set(tramosOk(P).map(t=>t.destino));
+  const dest=dests.size>1&&D.dest?' · '+D.dest:'';
   if(D.sit==='antes'||D.sit==='despues') return 'En España';
-  if(D.sit==='entre') return 'En España · entre estancias';
+  if(D.sit==='entre') return 'En España · vuelta intermedia';
   if(D.sit==='varias') return 'Vuelve el '+D.partes[0].d1+' y sale el '+D.partes[1].d0;
   return {destino:'En destino',salida:'Sale el '+D.d0,regreso:'Vuelve el '+D.d1,'ida-vuelta':'Del '+D.d0+' al '+D.d1}[D.sit]+dest;
 }
@@ -1035,8 +1037,7 @@ function motor(b,P,modo){
 function poblar(){
   const ord=[...PAISES].sort((a,b)=>a[0].localeCompare(b[0],'es'));
   const opts=ord.map(p=>`<option value="${p[0]}">${p[0]}</option>`).join('');
-  $('origen').innerHTML=opts; $('destino').innerHTML=opts; $('destino2').innerHTML=opts;
-  $('destino2').value='Italia';
+  $('origen').innerHTML=opts; $('destino').innerHTML=opts;
   $('origen').value='España'; $('destino').value='Francia';
   const mo=MESES_L.map((n,k)=>`<option value="${k+1}">${n[0].toUpperCase()+n.slice(1)}</option>`).join('');
   $('extra1').innerHTML=mo; $('extra2').innerHTML=mo;
@@ -1381,13 +1382,15 @@ function periodoCalculo(P){
 
 function datosEstancia(P){
   const s=P.salida, r=P.regreso;
-  for(const [k,t] of P.estancias.entries()){
-    const n=P.estancias.length>1?(k?' de la segunda estancia':' de la primera estancia'):'';
-    if(!t.salida||!t.regreso) return {err:'Indica el día de salida y el de regreso'+n+'.'};
-    if(t.b<t.a) return {err:'El regreso'+n+' no puede ser anterior a la salida.'};
+  if(!s||!r) return {err:'Indica el día de salida y el de regreso.'};
+  if(r.i*100+r.d<s.i*100+s.d) return {err:'El regreso no puede ser anterior a la salida.'};
+  if(P.pausa){
+    const v=P.pausa.vuelta, n=P.pausa.ida;
+    if(!v||!n) return {err:'Indica el día que vuelves a España y el día que te vas de nuevo.'};
+    const dv=diaNum(v.y,v.m,v.d), dn=diaNum(n.y,n.m,n.d), ds=diaNum(s.y,s.m,s.d), dr=diaNum(r.y,r.m,r.d);
+    if(dv<=ds||dn>dr) return {err:'La vuelta intermedia a España tiene que caer dentro de la estancia.'};
+    if(dn<=dv) return {err:'El día que te vas de nuevo tiene que ser posterior al día que vuelves a España.'};
   }
-  if(P.estancias.length>1&&P.estancias[1].a<=P.estancias[0].b)
-    return {err:'La segunda estancia tiene que empezar después de volver de la primera.'};
   const per=periodoCalculo(P);
   if(per.err) return per;
   if(per.yb-per.ya>9) return {err:'El periodo a calcular no puede pasar de 10 años naturales.'};
@@ -1424,12 +1427,12 @@ function pintarEstancia(P){
   const irpfPaga=T.irpf-T.comp;
   const noRes=E.anios.filter(a=>a.res.noRes).map(a=>a.y);
   const TRs=tramosOk(P);
-  $('eDashTag').textContent=(TRs.length>1
-      ?'· estancias del '+fecha(TRs[0].salida)+' al '+fecha(TRs[0].regreso)+' y del '+fecha(TRs[1].salida)+' al '+fecha(TRs[1].regreso)
-      :'· estancia del '+fecha(s)+' al '+fecha(r))+
+  $('eDashTag').textContent='· estancia del '+fecha(s)+' al '+fecha(r)+
+    (P.pausa?', con vuelta a España del '+fecha(P.pausa.vuelta)+' al '+fecha(P.pausa.ida):'')+
     (S.periodo==='custom'?' · calculando de '+E.per.txt:'');
-  $('eCfg').innerHTML=TRs.map(t=>
-    '<span><b>'+P.origen+' → '+t.destino+(P.nuclear?' (nuclear)':'')+'</b> · dieta <b>'+eur(t.dietaDia)+'</b>/día · plus <b>'+pct(t.pctPlus*100)+'</b></span>').join('');
+  $('eCfg').innerHTML=
+    '<span><b>'+P.origen+' → '+P.destino+(P.pausa?' → '+P.origen+' → '+P.destino:'')+(P.nuclear?' (nuclear)':'')+'</b></span>'+
+    '<span>Dieta <b>'+eur(P.dietaDia)+'</b>/día</span><span>Plus <b>'+pct(P.pctPlus*100)+'</b></span>';
   const kpi=(v,l,sub,cl)=>`<div class="kpi ${cl||''}"><div class="v">${v}</div><div class="l">${l}</div>${sub?`<div class="s">${sub}</div>`:''}</div>`;
   $('eKpis').innerHTML=
     kpi(eur0(T.neto),S.periodo==='custom'?'líquido del periodo calculado':'líquido de la estancia','incluye '+eur0(T.dieta)+' de dietas'+(T.comp>0?' y '+eur0(T.comp)+' de compensación':''),'main')+
@@ -1730,8 +1733,9 @@ function resumenEscenario(P,modo){
     const T=E.T,B=E.B;
     const f=x=>x.d+' '+MESES[x.m-1]+' '+x.y;
     const TRs=tramosOk(P);
-    return {...base,titulo:'Estancia en '+TRs.map(t=>t.destino).join(' y '),
-      detalle:TRs.map(t=>P.origen+' → '+t.destino+' · del '+f(t.salida)+' al '+f(t.regreso)).join('<br>'),
+    return {...base,titulo:'Estancia en '+P.destino,
+      detalle:P.origen+' → '+P.destino+' · del '+f(P.salida)+' al '+f(P.regreso)+
+        (P.pausa?'<br>Vuelta a España del '+f(P.pausa.vuelta)+' al '+f(P.pausa.ida):''),
       periodo:S.periodo==='custom'?E.per.txt:'la estancia ('+nf0.format(T.periodo)+' días)',meses:T.meses,
       sal:T.sal+T.ext+T.variable,plus:T.plus,dieta:T.dieta,dev:T.dev,suj:T.suj,
       irpf:T.irpf-T.comp,comp:T.comp,ss:T.ss,neto:T.neto,gana:T.neto-B.neto,fuera:T.fuera};
@@ -1942,7 +1946,7 @@ function pintarComparador(){
    GUARDAR / CARGAR / EXCEL
    ============================================================ */
 const CHECKS=['nuclear','regla183','tope','est2'];
-const CAMPOS=['importe','variable','extra1','extra2','origen','destino','salida','regreso','destino2','salida2','regreso2','calcDesde','calcHasta','diasDef','anio',
+const CAMPOS=['importe','variable','extra1','extra2','origen','destino','salida','regreso','vueltaEsp','idaDeNuevo','calcDesde','calcHasta','diasDef','anio',
   'irpfManual','desc','disc','tipoSS','tipoEmp','baseMin','baseMax'];
 function estado(){
   const c={}; CAMPOS.forEach(id=>c[id]=$(id).value);
@@ -2061,7 +2065,7 @@ $('btnExcel').addEventListener('click',()=>{
     par.push(['Origen',P.origen],['Destino',P.destino],['Central nuclear',P.nuclear?'Sí':'No'],
       ['Salida',$('salida').value],['Regreso',$('regreso').value],['Días/mes en destino',P.diasDef],
       ['Dieta diaria',P.dietaDia],['% plus',P.pctPlus],
-      ['Segunda estancia',P.estancias.length>1?P.estancias[1].destino+' · '+$('salida2').value+' a '+$('regreso2').value:'No'],
+      ['Vuelta intermedia a España',P.pausa?$('vueltaEsp').value+' a '+$('idaDeNuevo').value:'No'],
       ['Regla de 183 días',P.regla183?'Sí':'No'],['Tope IRPF de España (IDOM)',P.tope?'Sí':'No']);
   }
   XLSX.utils.book_append_sheet(wb,hoja(par,[34,26],(r,c)=>{
@@ -2137,17 +2141,22 @@ seg('segPagas','pagas',Number);
 seg('segCobro','cobroExtra');
 seg('segIrpf','irpf');
 seg('segPeriodo','periodo');
-['importe','variable','regla183','tope','extra1','extra2','origen','destino','nuclear','salida','regreso','destino2','salida2','regreso2','calcDesde','calcHasta','diasDef','anio',
+['importe','variable','regla183','tope','extra1','extra2','origen','destino','nuclear','salida','regreso','vueltaEsp','idaDeNuevo','calcDesde','calcHasta','diasDef','anio',
  'irpfManual','desc','disc','tipoSS','tipoEmp','baseMin','baseMax']
-  .forEach(id=>$(id).addEventListener(['salida','regreso','salida2','regreso2','anio','calcDesde','calcHasta'].includes(id)?'change':'input',calc));
-/* al activar la segunda estancia, si sus fechas no encajan, propone unas tras la primera */
+  .forEach(id=>$(id).addEventListener(['salida','regreso','vueltaEsp','idaDeNuevo','anio','calcDesde','calcHasta'].includes(id)?'change':'input',calc));
+/* al activar la vuelta intermedia, si sus fechas no caen dentro de la estancia, propone unas a mitad */
 $('est2').addEventListener('change',()=>{
   if(!$('est2').checked)return;
-  const r1=parseFecha($('regreso').value), s2=parseFecha($('salida2').value);
-  if(r1&&(!s2||diaNum(s2.y,s2.m,s2.d)<=diaNum(r1.y,r1.m,r1.d))){
-    const iso=n=>new Date(n*864e5).toISOString().slice(0,10);
-    const a=diaNum(r1.y,r1.m,r1.d)+60;
-    $('salida2').value=iso(a); $('regreso2').value=iso(a+120);
+  const s1=parseFecha($('salida').value), r1=parseFecha($('regreso').value);
+  const v=parseFecha($('vueltaEsp').value), n=parseFecha($('idaDeNuevo').value);
+  if(s1&&r1){
+    const a=diaNum(s1.y,s1.m,s1.d), b=diaNum(r1.y,r1.m,r1.d);
+    const dv=v?diaNum(v.y,v.m,v.d):NaN, dn=n?diaNum(n.y,n.m,n.d):NaN;
+    if(!(dv>a&&dn>dv&&dn<=b)){
+      const iso=x=>new Date(x*864e5).toISOString().slice(0,10);
+      const mid=Math.round((a+b)/2), largo=Math.min(30,Math.max(2,Math.floor((b-a)/4)));
+      $('vueltaEsp').value=iso(mid-Math.floor(largo/2)); $('idaDeNuevo').value=iso(mid-Math.floor(largo/2)+largo);
+    }
   }
   calc();
 },true);
