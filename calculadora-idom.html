@@ -221,6 +221,7 @@
   body.m-comparador .no-estancia,
   body.m-comparador #form,
   body:not(.per-custom) .solo-custom,
+  body:not(.con-est2) .solo-est2,
   body.m-desglose .no-desglose,
   body.m-estancia .no-estancia,
   body.p12 .solo-14,
@@ -328,6 +329,22 @@
           <div><label class="lab" for="regreso">Día de regreso</label><input type="date" id="regreso" value="2027-12-20"></div>
         </div>
         <div class="hint">El resto del año cobras el sueldo de origen.</div>
+      </div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="est2"> Segunda estancia en el mismo periodo</label>
+      </div>
+      <div class="solo-est2">
+        <div class="field">
+          <label class="lab" for="destino2">Destino de la segunda estancia</label>
+          <select id="destino2"></select>
+        </div>
+        <div class="field">
+          <div class="row2">
+            <div><label class="lab" for="salida2">Salida</label><input type="date" id="salida2" value="2028-02-01"></div>
+            <div><label class="lab" for="regreso2">Regreso</label><input type="date" id="regreso2" value="2028-05-31"></div>
+          </div>
+          <div class="hint">Entre las dos estancias vuelves a España y cobras el sueldo español. La regla de los 183 días suma los días fuera de las dos.</div>
+        </div>
       </div>
       <div class="field">
         <label class="lab">Periodo a calcular</label>
@@ -758,7 +775,17 @@ function leer(){
   const po=PAISES.find(p=>p[0]===$('origen').value)||PAISES[0];
   const pd=PAISES.find(p=>p[0]===$('destino').value)||PAISES[0];
   const nuclear=$('nuclear').checked;
-  const pctPlus=(pd[2]<=po[2]?0.15:0.15+(pd[2]-po[2]))+(nuclear?0.10:0);
+  const plusDe=d=>(d[2]<=po[2]?0.15:0.15+(d[2]-po[2]))+(nuclear?0.10:0);
+  const pctPlus=plusDe(pd);
+  const tramo=(d,a,b)=>{ const sa=parseFecha(a), rb=parseFecha(b);
+    return {destino:d[0],dietaDia:d[1],pctPlus:plusDe(d),salida:sa,regreso:rb,
+            a:sa?diaNum(sa.y,sa.m,sa.d):NaN,b:rb?diaNum(rb.y,rb.m,rb.d):NaN}; };
+  const estancias=[tramo(pd,$('salida').value,$('regreso').value)];
+  if($('est2').checked){
+    const pd2=PAISES.find(p=>p[0]===$('destino2').value)||pd;
+    estancias.push(tramo(pd2,$('salida2').value,$('regreso2').value));
+  }
+  const ult=estancias[estancias.length-1];
   const subidas=S.subidas
     .map(s=>({pct:+s.pct||0,i:parseYM(s.desde)}))
     .filter(s=>isFinite(s.i)&&S.mode!=='desglose')
@@ -772,7 +799,8 @@ function leer(){
     tSS:num('tipoSS')/100,tEmp:num('tipoEmp')/100,bMin:num('baseMin'),bMax,
     subidas,
     origen:po[0],destino:pd[0],nuclear,dietaDia:pd[1],pctPlus,
-    salida:parseFecha($('salida').value),regreso:parseFecha($('regreso').value),
+    estancias,
+    salida:estancias[0].salida,regreso:ult.regreso||estancias[0].regreso,
     diasDef:Math.max(0,Math.min(31,num('diasDef'))),
     anio:Math.round(num('anio'))||new Date().getFullYear(),
   };
@@ -817,42 +845,64 @@ function infoExtra(P,i){
   return t;
 }
 
-/* Situación de un mes respecto a la estancia */
-function situacion(P,y,m,est){
-  if(!est)return {dias:0,fin:false,sit:'origen'};
-  const i=y*12+m-1, s=P.salida, r=P.regreso, dim=diasMes(y,m);
-  if(i<s.i)return {dias:0,fin:false,sit:'antes'};
-  if(i>r.i)return {dias:0,fin:false,sit:'despues'};
-  const d0=i===s.i?s.d:1, d1=i===r.i?r.d:dim;
-  const cubiertos=Math.max(0,d1-d0+1);
-  let dias=Math.round(P.diasDef*cubiertos/dim);
-  const k=ymKey(i), ov=S.overrides[k]!=null;
-  if(ov)dias=S.overrides[k];
-  const sit=i===s.i&&i===r.i?'ida-vuelta':i===s.i?'salida':i===r.i?'regreso':'destino';
-  return {dias,fin:i<r.i,sit,ov,d0,d1};
-}
-
-/* Días naturales fuera de España en el año y, entre la salida y el regreso */
+/* Situación de un mes respecto a las estancias (una o dos) */
 const diaNum=(y,m,d)=>Date.UTC(y,m-1,d)/864e5;
+const solapeDias=(a0,a1,b0,b1)=>Math.max(0,Math.min(a1,b1)-Math.max(a0,b0)+1);
+const tramosOk=P=>(P.estancias||[]).filter(t=>isFinite(t.a)&&isFinite(t.b)&&t.b>=t.a);
+function situacion(P,y,m,est){
+  if(!est)return {dias:0,fin:false,sit:'origen',partes:[]};
+  const i=y*12+m-1, dim=diasMes(y,m), m0=diaNum(y,m,1), m1=diaNum(y,m,dim);
+  const T=tramosOk(P);
+  const partes=[];
+  for(const t of T){
+    const cub=solapeDias(m0,m1,t.a,t.b);
+    if(cub>0) partes.push({t,cub,d0:Math.max(m0,t.a)-m0+1,d1:Math.min(m1,t.b)-m0+1,dias:Math.round(P.diasDef*cub/dim)});
+  }
+  if(!partes.length){
+    const sit=!T.length||m1<T[0].a?'antes':m0>T[T.length-1].b?'despues':'entre';
+    return {dias:0,fin:false,sit,partes};
+  }
+  const k=ymKey(i), ov=S.overrides[k]!=null;
+  let dias=partes.reduce((a,p)=>a+p.dias,0);
+  if(ov){
+    const v=S.overrides[k];
+    if(dias>0) partes.forEach(p=>p.dias=v*p.dias/dias); else partes[0].dias=v;
+    dias=v;
+  }
+  const finT=T.find(t=>t.a<=m1&&t.b>m1)||null;
+  let sit;
+  if(partes.length>1) sit='varias';
+  else{
+    const p=partes[0], ini=p.d0>1, fin=p.d1<dim;
+    sit=ini&&fin?'ida-vuelta':ini?'salida':fin?'regreso':'destino';
+  }
+  return {dias,fin:!!finT,finT,sit,ov,d0:partes[0].d0,d1:partes[partes.length-1].d1,partes,dest:partes[0].t.destino};
+}
+function textoSituacion(D,P){
+  const varias=tramosOk(P).length>1;
+  const dest=varias&&D.dest?' · '+D.dest:'';
+  if(D.sit==='antes'||D.sit==='despues') return 'En España';
+  if(D.sit==='entre') return 'En España · entre estancias';
+  if(D.sit==='varias') return 'Vuelve el '+D.partes[0].d1+' y sale el '+D.partes[1].d0;
+  return {destino:'En destino',salida:'Sale el '+D.d0,regreso:'Vuelve el '+D.d1,'ida-vuelta':'Del '+D.d0+' al '+D.d1}[D.sit]+dest;
+}
+const enEspana=D=>D.sit==='antes'||D.sit==='despues'||D.sit==='entre';
+
+/* Días naturales fuera de España en el año y, sumando las estancias */
 function residencia(P,y,est){
   const diasAnio=diaNum(y+1,1,1)-diaNum(y,1,1);
   let fuera=0;
-  if(est&&P.salida&&P.regreso){
-    const a=Math.max(diaNum(P.salida.y,P.salida.m,P.salida.d),diaNum(y,1,1));
-    const b=Math.min(diaNum(P.regreso.y,P.regreso.m,P.regreso.d),diaNum(y,12,31));
-    fuera=Math.max(0,b-a+1);
-  }
+  if(est) for(const t of tramosOk(P)) fuera+=solapeDias(diaNum(y,1,1),diaNum(y,12,31),t.a,t.b);
   const espana=diasAnio-fuera;
   return {fuera,espana,noRes:!!(est&&P.regla183&&fuera>0&&fuera<183)};
 }
 
-/* Parte del mes absoluto i que pasas fuera (días naturales entre salida y regreso) */
+/* Parte del mes absoluto i que pasas fuera (días naturales dentro de alguna estancia) */
 function fraccionFuera(P,i){
-  if(!P.salida||!P.regreso)return 0;
   const y0=Math.floor(i/12), m0=i%12+1, dim=diasMes(y0,m0);
-  const a=Math.max(diaNum(P.salida.y,P.salida.m,P.salida.d),diaNum(y0,m0,1));
-  const b=Math.min(diaNum(P.regreso.y,P.regreso.m,P.regreso.d),diaNum(y0,m0,dim));
-  return Math.max(0,b-a+1)/dim;
+  let f=0;
+  for(const t of tramosOk(P)) f+=solapeDias(diaNum(y0,m0,1),diaNum(y0,m0,dim),t.a,t.b);
+  return f/dim;
 }
 
 /* Un año natural mes a mes. est=true aplica la estancia (plus y dietas). */
@@ -863,8 +913,8 @@ function simularAnio(P,y,est){
     const i=y*12+m-1;
     const sa=salAnual(P,i), salMes=sa/P.pagas;
     const D=situacion(P,y,m,est);
-    const plus=sa/365*P.pctPlus*D.dias;
-    const dieta=P.dietaDia*D.dias;
+    const plus=D.partes.reduce((a,p)=>a+sa/365*p.t.pctPlus*p.dias,0);
+    const dieta=D.partes.reduce((a,p)=>a+p.t.dietaDia*p.dias,0);
     let extra=0, extraInfo=null;
     if(P.pagas===14){
       if(P.prorr) extra=salMes/largoPeriodo(P,m);
@@ -901,7 +951,7 @@ function simularAnio(P,y,est){
     else{
       /* lo que queda del año, suponiendo que las condiciones de este mes se mantienen */
       const salCur=M.salMes;
-      const plusCur=M.D.fin?M.sa/365*P.pctPlus*P.diasDef:0;
+      const plusCur=M.D.fin?M.sa/365*M.D.finT.pctPlus*P.diasDef:0;
       const fueraFut=ex&&M.D.fin;
       let fut=0, futTax=0;
       for(let j=M.m+1;j<=12;j++){
@@ -985,7 +1035,8 @@ function motor(b,P,modo){
 function poblar(){
   const ord=[...PAISES].sort((a,b)=>a[0].localeCompare(b[0],'es'));
   const opts=ord.map(p=>`<option value="${p[0]}">${p[0]}</option>`).join('');
-  $('origen').innerHTML=opts; $('destino').innerHTML=opts;
+  $('origen').innerHTML=opts; $('destino').innerHTML=opts; $('destino2').innerHTML=opts;
+  $('destino2').value='Italia';
   $('origen').value='España'; $('destino').value='Francia';
   const mo=MESES_L.map((n,k)=>`<option value="${k+1}">${n[0].toUpperCase()+n.slice(1)}</option>`).join('');
   $('extra1').innerHTML=mo; $('extra2').innerHTML=mo;
@@ -1055,6 +1106,7 @@ function calc(){
   if(S.mode!=='comparador') S.ultimo=S.mode;
   ['desglose','subidas','estancia','comparador'].forEach(m=>body.classList.toggle('m-'+m,S.mode===m));
   body.classList.toggle('per-custom',S.periodo==='custom');
+  body.classList.toggle('con-est2',$('est2').checked);
   body.classList.toggle('p12',S.pagas===12);
   ['tabla','prog','manual','zero'].forEach(m=>body.classList.toggle('irpf-'+m,S.irpf===m));
 
@@ -1257,8 +1309,7 @@ function porcionEstancia(con,sin,P){
   const T={sal:0,ext:0,variable:0,plus:0,dieta:0,irpf:0,ss:0,neto:0,fuera:0,dias:0,comp:0,periodo:0};
   const B={sal:0,ext:0,variable:0,irpf:0,ss:0,neto:0};
   const ex=con.res.noRes;
-  const ea=diaNum(P.salida.y,P.salida.m,P.salida.d), eb=diaNum(P.regreso.y,P.regreso.m,P.regreso.d);
-  const solape=(a0,a1,b0,b1)=>Math.max(0,Math.min(a1,b1)-Math.max(a0,b0)+1);
+  const solape=solapeDias, TR=tramosOk(P);
   const suma=(r,rs,campo)=>{
     T[campo]+=r.imp; T.irpf+=r.irpf; T.ss+=r.ss; T.neto+=r.neto;
     B[campo]+=r.imp; B.irpf+=rs.irpf; B.ss+=rs.ss; B.neto+=r.netoS;
@@ -1267,7 +1318,7 @@ function porcionEstancia(con,sin,P){
     const dim=diasMes(M.y,M.m), m0=diaNum(M.y,M.m,1), m1=diaNum(M.y,M.m,dim);
     const enPer=solape(m0,m1,P.per.a,P.per.b); if(!enPer)return;
     const D=M.D, Ms=sin.meses[k], f=enPer/dim;
-    const nat=solape(Math.max(m0,P.per.a),Math.min(m1,P.per.b),ea,eb);
+    const nat=TR.reduce((acc,t)=>acc+solape(Math.max(m0,P.per.a),Math.min(m1,P.per.b),t.a,t.b),0);
     const sal=M.salMes*f, suj=sal+M.plus;
     const tax=ex?sal*(enPer-nat)/enPer:suj;
     const irpf=M.tipo*tax, ss=Math.max(0,M.ss-Ms.ss*(1-f));
@@ -1330,8 +1381,13 @@ function periodoCalculo(P){
 
 function datosEstancia(P){
   const s=P.salida, r=P.regreso;
-  if(!s||!r) return {err:'Indica el día de salida y el de regreso.'};
-  if(r.i*100+r.d<s.i*100+s.d) return {err:'El regreso no puede ser anterior a la salida.'};
+  for(const [k,t] of P.estancias.entries()){
+    const n=P.estancias.length>1?(k?' de la segunda estancia':' de la primera estancia'):'';
+    if(!t.salida||!t.regreso) return {err:'Indica el día de salida y el de regreso'+n+'.'};
+    if(t.b<t.a) return {err:'El regreso'+n+' no puede ser anterior a la salida.'};
+  }
+  if(P.estancias.length>1&&P.estancias[1].a<=P.estancias[0].b)
+    return {err:'La segunda estancia tiene que empezar después de volver de la primera.'};
   const per=periodoCalculo(P);
   if(per.err) return per;
   if(per.yb-per.ya>9) return {err:'El periodo a calcular no puede pasar de 10 años naturales.'};
@@ -1367,13 +1423,13 @@ function pintarEstancia(P){
   const medio=completos.length?completos.reduce((a,f)=>a+f.neto,0)/completos.length:(T.fuera?T.neto/T.fuera*30.44:0);
   const irpfPaga=T.irpf-T.comp;
   const noRes=E.anios.filter(a=>a.res.noRes).map(a=>a.y);
-  $('eDashTag').textContent='· estancia del '+fecha(s)+' al '+fecha(r)+
+  const TRs=tramosOk(P);
+  $('eDashTag').textContent=(TRs.length>1
+      ?'· estancias del '+fecha(TRs[0].salida)+' al '+fecha(TRs[0].regreso)+' y del '+fecha(TRs[1].salida)+' al '+fecha(TRs[1].regreso)
+      :'· estancia del '+fecha(s)+' al '+fecha(r))+
     (S.periodo==='custom'?' · calculando de '+E.per.txt:'');
-  $('eCfg').innerHTML=[
-    '<b>'+P.origen+' → '+P.destino+(P.nuclear?' (nuclear)':'')+'</b>',
-    'Dieta <b>'+eur(P.dietaDia)+'</b>/día',
-    'Plus <b>'+pct(P.pctPlus*100)+'</b>',
-  ].map(x=>'<span>'+x+'</span>').join('');
+  $('eCfg').innerHTML=TRs.map(t=>
+    '<span><b>'+P.origen+' → '+t.destino+(P.nuclear?' (nuclear)':'')+'</b> · dieta <b>'+eur(t.dietaDia)+'</b>/día · plus <b>'+pct(t.pctPlus*100)+'</b></span>').join('');
   const kpi=(v,l,sub,cl)=>`<div class="kpi ${cl||''}"><div class="v">${v}</div><div class="l">${l}</div>${sub?`<div class="s">${sub}</div>`:''}</div>`;
   $('eKpis').innerHTML=
     kpi(eur0(T.neto),S.periodo==='custom'?'líquido del periodo calculado':'líquido de la estancia','incluye '+eur0(T.dieta)+' de dietas'+(T.comp>0?' y '+eur0(T.comp)+' de compensación':''),'main')+
@@ -1459,8 +1515,8 @@ function tablaEstancia(E,P){
         h+=partida('Paga extra de '+MESES_L[F.pago%12]+' '+Math.floor(F.pago/12)+' <span class="tag">aún no se cobra: devengado el '+nfx.format(F.pct*100)+' % de sus días al acabar el periodo</span>',F);
         continue;
       }
-      const enEsp=D.sit==='antes'||D.sit==='despues';
-      const sit=enEsp?'En España':{destino:'En destino',salida:'Sale el '+D.d0,regreso:'Vuelve el '+D.d1,'ida-vuelta':'Del '+D.d0+' al '+D.d1}[D.sit];
+      const enEsp=enEspana(D);
+      const sit=textoSituacion(D,P);
       const sub=M.subida?` <span class="pill up">${signo(M.subida.pct,milar)} %</span>`:'';
       h+=`<tr class="${D.ov?'ov':''} ${enEsp?'fuera':''}"><td>${MESES[M.m-1]}</td><td>${sit}</td><td class="n">${F.nat||'—'}</td>`+
         `<td class="n">${enEsp?'—':`<input type="number" class="dias" data-k="${ymKey(M.i)}" value="${D.dias}" min="0" max="31" aria-label="Días en destino en ${MESES_L[M.m-1]} ${M.y}">`}</td>`+
@@ -1503,7 +1559,7 @@ function tablaAnio(A,P,est,soloAnio,sin){
   for(const M of A.meses){
     const baseMes=M.salMes+M.plus+(P.prorr?M.extra:0);
     const D=M.D;
-    const fuera=est&&(D.sit==='antes'||D.sit==='despues');
+    const fuera=est&&enEspana(D);
     let sitTxt='', diasTxt='';
     if(est){
       sitTxt={antes:'En origen',despues:'De vuelta',destino:'En destino',
@@ -1672,8 +1728,10 @@ function resumenEscenario(P,modo){
     const E=datosEstancia(P);
     if(E.err) return {...base,err:E.err};
     const T=E.T,B=E.B;
-    return {...base,titulo:'Estancia en '+P.destino,
-      detalle:P.origen+' → '+P.destino+' · del '+P.salida.d+' '+MESES[P.salida.m-1]+' '+P.salida.y+' al '+P.regreso.d+' '+MESES[P.regreso.m-1]+' '+P.regreso.y,
+    const f=x=>x.d+' '+MESES[x.m-1]+' '+x.y;
+    const TRs=tramosOk(P);
+    return {...base,titulo:'Estancia en '+TRs.map(t=>t.destino).join(' y '),
+      detalle:TRs.map(t=>P.origen+' → '+t.destino+' · del '+f(t.salida)+' al '+f(t.regreso)).join('<br>'),
       periodo:S.periodo==='custom'?E.per.txt:'la estancia ('+nf0.format(T.periodo)+' días)',meses:T.meses,
       sal:T.sal+T.ext+T.variable,plus:T.plus,dieta:T.dieta,dev:T.dev,suj:T.suj,
       irpf:T.irpf-T.comp,comp:T.comp,ss:T.ss,neto:T.neto,gana:T.neto-B.neto,fuera:T.fuera};
@@ -1883,8 +1941,8 @@ function pintarComparador(){
 /* ============================================================
    GUARDAR / CARGAR / EXCEL
    ============================================================ */
-const CHECKS=['nuclear','regla183','tope'];
-const CAMPOS=['importe','variable','extra1','extra2','origen','destino','salida','regreso','calcDesde','calcHasta','diasDef','anio',
+const CHECKS=['nuclear','regla183','tope','est2'];
+const CAMPOS=['importe','variable','extra1','extra2','origen','destino','salida','regreso','destino2','salida2','regreso2','calcDesde','calcHasta','diasDef','anio',
   'irpfManual','desc','disc','tipoSS','tipoEmp','baseMin','baseMax'];
 function estado(){
   const c={}; CAMPOS.forEach(id=>c[id]=$(id).value);
@@ -2003,6 +2061,7 @@ $('btnExcel').addEventListener('click',()=>{
     par.push(['Origen',P.origen],['Destino',P.destino],['Central nuclear',P.nuclear?'Sí':'No'],
       ['Salida',$('salida').value],['Regreso',$('regreso').value],['Días/mes en destino',P.diasDef],
       ['Dieta diaria',P.dietaDia],['% plus',P.pctPlus],
+      ['Segunda estancia',P.estancias.length>1?P.estancias[1].destino+' · '+$('salida2').value+' a '+$('regreso2').value:'No'],
       ['Regla de 183 días',P.regla183?'Sí':'No'],['Tope IRPF de España (IDOM)',P.tope?'Sí':'No']);
   }
   XLSX.utils.book_append_sheet(wb,hoja(par,[34,26],(r,c)=>{
@@ -2078,9 +2137,20 @@ seg('segPagas','pagas',Number);
 seg('segCobro','cobroExtra');
 seg('segIrpf','irpf');
 seg('segPeriodo','periodo');
-['importe','variable','regla183','tope','extra1','extra2','origen','destino','nuclear','salida','regreso','calcDesde','calcHasta','diasDef','anio',
+['importe','variable','regla183','tope','extra1','extra2','origen','destino','nuclear','salida','regreso','destino2','salida2','regreso2','calcDesde','calcHasta','diasDef','anio',
  'irpfManual','desc','disc','tipoSS','tipoEmp','baseMin','baseMax']
-  .forEach(id=>$(id).addEventListener(['salida','regreso','anio','calcDesde','calcHasta'].includes(id)?'change':'input',calc));
+  .forEach(id=>$(id).addEventListener(['salida','regreso','salida2','regreso2','anio','calcDesde','calcHasta'].includes(id)?'change':'input',calc));
+/* al activar la segunda estancia, si sus fechas no encajan, propone unas tras la primera */
+$('est2').addEventListener('change',()=>{
+  if(!$('est2').checked)return;
+  const r1=parseFecha($('regreso').value), s2=parseFecha($('salida2').value);
+  if(r1&&(!s2||diaNum(s2.y,s2.m,s2.d)<=diaNum(r1.y,r1.m,r1.d))){
+    const iso=n=>new Date(n*864e5).toISOString().slice(0,10);
+    const a=diaNum(r1.y,r1.m,r1.d)+60;
+    $('salida2').value=iso(a); $('regreso2').value=iso(a+120);
+  }
+  calc();
+},true);
 ['salida','regreso','anio'].forEach(id=>$(id).addEventListener('input',()=>{ if($(id).value.length>=4) calc(); }));
 
 $('btnReset').addEventListener('click',()=>{
