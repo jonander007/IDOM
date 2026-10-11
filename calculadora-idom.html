@@ -2,7 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0061A8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Calculadora IDOM">
 <title>Calculadora de nóminas y desplazamientos · IDOM</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -232,6 +236,74 @@
 
   footer{margin-top:28px;font-size:12.5px;color:var(--muted);line-height:1.6;max-width:84ch}
   footer p{margin:0 0 8px}
+
+  /* ================= MÓVIL ================= */
+  #barraMovil{display:none}
+  @media (max-width:900px){
+    .wrap{padding:14px 12px calc(96px + env(safe-area-inset-bottom))}
+    header{gap:10px;margin-bottom:12px;padding-bottom:10px}
+    h1{font-size:20px;line-height:1.2}
+    h1 .tag{display:block;font-size:13px !important}
+    header p{display:none}
+    .acciones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%}
+    .acciones .btn{padding:10px 8px;font-size:13px;min-height:42px}
+
+    /* pestañas compactas y fijas arriba */
+    .modos{position:sticky;top:0;z-index:20;display:flex !important;gap:6px;overflow-x:auto;
+      margin:0 -12px 14px;padding:8px 12px;background:var(--paper);scrollbar-width:none;
+      box-shadow:0 6px 10px -10px rgba(15,30,51,.5)}
+    .modos::-webkit-scrollbar{display:none}
+    .modos button{flex:0 0 auto;padding:9px 14px;border-top-width:1px;border-radius:20px;min-height:40px}
+    .modos button span{display:none}
+    .modos button b{font-size:14px;margin:0;white-space:nowrap}
+    .modos button[aria-pressed=true]{background:var(--teal);border-color:var(--teal)}
+    .modos button[aria-pressed=true] b{color:#fff}
+
+    /* tamaños táctiles y sin zoom en iPhone */
+    input[type=number],input[type=date],input[type=month],input[type=text],select,
+    .adv input,.sub-row input,table.cal input.dias{font-size:16px !important}
+    input[type=number],input[type=date],input[type=month],select{min-height:44px}
+    .big-input{font-size:22px !important}
+    .seg button{min-height:42px;font-size:14px}
+    .quick button{min-height:38px;padding:7px 12px}
+    .check{font-size:15px}
+    .check input{width:20px;height:20px}
+    .panel{padding:16px 14px}
+    .sub-row{grid-template-columns:20px 80px 1fr 36px}
+
+    /* resultados */
+    .hero{padding:16px 14px}
+    .hero .row{gap:16px 26px}
+    .figure{font-size:44px}
+    .sub{font-size:24px}
+    .kpi{padding:12px}
+    .kpi .v{font-size:24px}
+    .kpi.main .v{font-size:30px}
+    .kpi .s{font-size:11.5px}
+    h2{font-size:15px}
+
+    /* tablas: mes fijo a la izquierda al deslizar */
+    .scrollx{margin:0 -14px;padding:0 14px}
+    table.cal{font-size:12.5px}
+    table.cal th:first-child,table.cal td:first-child:not([colspan]){position:sticky;left:0;z-index:2;background:var(--card);
+      box-shadow:6px 0 6px -6px rgba(15,30,51,.25)}
+    table.cal input.dias{width:58px;min-height:36px}
+
+    /* gráficos legibles */
+    svg text{font-size:22px}
+    #chartCmp text{font-size:32px}
+
+    /* barra fija con el resultado */
+    #barraMovil{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;align-items:center;gap:10px;
+      padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;
+      box-shadow:0 -6px 18px rgba(15,30,51,.25)}
+    #barraMovil .bm-txt{flex:1;min-width:0;line-height:1.2}
+    #barraMovil .bm-v{font-family:"Instrument Serif",Georgia,serif;font-size:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #barraMovil .bm-l{font-size:11.5px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #barraMovil button{font:inherit;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,.4);background:transparent;
+      color:#fff;border-radius:20px;padding:9px 14px;min-height:40px}
+    #barraMovil button.on{background:#fff;color:var(--ink);border-color:#fff}
+  }
 </style>
 </head>
 <body class="m-desglose irpf-tabla">
@@ -431,7 +503,7 @@
   </form>
 
   <!-- ================= RESULTADOS ================= -->
-  <div>
+  <div id="resultados">
 
     <!-- ========== DESGLOSE Y SUBIDAS ========== -->
     <div class="no-estancia">
@@ -631,6 +703,11 @@
     </footer>
 </div>
 
+<div id="barraMovil" role="region" aria-label="Resultado">
+  <div class="bm-txt"><div class="bm-v" id="bmV">—</div><div class="bm-l" id="bmL"></div></div>
+  <button type="button" id="bmDatos">Datos</button>
+  <button type="button" id="bmRes" class="on">Resultado</button>
+</div>
 <script>
 "use strict";
 /* ============================================================
@@ -1127,6 +1204,35 @@ function calc(){
   guardarLocal();
   if(S.mode==='comparador') pintarComparador();
   else if(S.mode==='estancia') pintarEstancia(P); else pintarNomina(P);
+  pintarBarraMovil();
+}
+
+/* Barra fija del móvil: el resultado principal de la pestaña */
+function pintarBarraMovil(){
+  const t=id=>{const e=$(id);return e?e.textContent.trim():'';};
+  const kv=(sel,n)=>{const k=document.querySelectorAll(sel+' .kpi')[n];return k?[k.querySelector('.v').textContent,k.querySelector('.l').textContent]:['—',''];};
+  let v='—', l='';
+  if(S.mode==='desglose'){ v=t('nHeroNeto'); l='líquido al mes · '+t('nHeroAnual')+' al año'; }
+  else if(S.mode==='subidas'){ v=t('sHeroNeto'); l='mensualidad tras las subidas · '+t('sHeroGana')+' al año'; }
+  else if(S.mode==='estancia'){
+    if($('eAviso').textContent.trim()){ v='Revisa las fechas'; l=t('eAviso'); }
+    else{ const a=kv('#eKpis',0), g=kv('#eKpis',2); v=a[0]; l=a[1]+' · '+g[0]+' '+g[1]; }
+  }
+  else{ const d=kv('#cmpKpis',2); v=d[0]; l=d[0]==='—'?'carga los dos escenarios':d[1]; }
+  $('bmV').textContent=v; $('bmL').textContent=l;
+}
+function irA(el){ const y=el.getBoundingClientRect().top+window.scrollY-60; window.scrollTo({top:y,behavior:'smooth'}); }
+$('bmDatos').addEventListener('click',()=>irA(S.mode==='comparador'?document.querySelector('.solo-comparador'):$('form')));
+$('bmRes').addEventListener('click',()=>{
+  const el=S.mode==='estancia'?$('eContenido'):S.mode==='comparador'?$('cmpKpis'):$('resultados');
+  irA(el);
+});
+/* resalta qué parte estás viendo */
+if('IntersectionObserver' in window){
+  const io=new IntersectionObserver(es=>{
+    for(const e of es) if(e.target.id==='form'){ $('bmDatos').classList.toggle('on',e.isIntersecting); $('bmRes').classList.toggle('on',!e.isIntersecting); }
+  },{rootMargin:'-45% 0px -45% 0px'});
+  io.observe($('form'));
 }
 
 /* ---------------- NÓMINA ---------------- */
