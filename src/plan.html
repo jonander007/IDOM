@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0061A8">
+<title>Mi plan · Calculadora IDOM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icono.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icono-180.png">
+<link rel="stylesheet" href="estilos.css">
+<link rel="stylesheet" href="plan.css">
+</head>
+<body class="plan">
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>Mi plan <span class="tag" style="font-size:15px;font-weight:400">· nómina, balance y plan de pagos</span></h1>
+    <p>La nómina sale de tu estancia en la <a href="calculadora-idom.html">Calculadora IDOM</a>. Apunta tu dinero y tus deudas, a mano o escribiendo, y el plan de pagos se recalcula solo. Todo se guarda solo en este navegador.</p>
+  </div>
+  <div class="acciones">
+    <a class="btn" href="calculadora-idom.html">← Calculadora</a>
+    <button class="btn" type="button" id="btnExportar">Guardar copia</button>
+    <button class="btn" type="button" id="btnImportar">Cargar copia</button>
+    <input type="file" id="fichero" accept=".json,application/json" hidden>
+    <button class="btn" type="button" id="btnDeshacer" hidden>Deshacer</button>
+  </div>
+</header>
+
+<nav class="modos tabs3" id="tabs" aria-label="Pestañas">
+  <button type="button" data-tab="nomina" aria-pressed="true"><b>1 · Nómina</b><span>Lo que cobras cada mes según tu estancia</span></button>
+  <button type="button" data-tab="balance" aria-pressed="false"><b>2 · Balance</b><span>Tu dinero y tus deudas: a mano o escribiendo</span></button>
+  <button type="button" data-tab="pagos" aria-pressed="false"><b>3 · Plan de pagos</b><span>Saldo previsto, próximos pagos y fin de las deudas</span></button>
+</nav>
+
+<!-- ================= 1 · NÓMINA ================= -->
+<section id="t-nomina">
+<div class="grid">
+  <div class="panel" id="formN">
+    <h3>Tu estancia</h3>
+    <div id="nFuente" class="hint" style="margin:-4px 0 12px"></div>
+    <div id="nCfg" class="ficha"></div>
+    <h3>Proyección</h3>
+    <div class="field"><label class="lab" for="horizonte">Meses a proyectar</label>
+      <select id="horizonte">
+        <option value="12">12 meses</option><option value="15">15 meses</option><option value="18">18 meses</option>
+        <option value="24">24 meses</option><option value="36">36 meses</option>
+      </select>
+      <div class="hint">Desde el mes de tu saldo. Lo que cobras pasa solo al plan de pagos.</div></div>
+    <a class="btn" href="calculadora-idom.html" style="display:inline-block;text-decoration:none">Cambiar la estancia en la calculadora</a>
+    <div class="hint">O cuéntalo en la pestaña Balance: «vuelvo el 15 de junio», «en marzo estaré 10 días fuera», «me suben un 5 % en enero».</div>
+  </div>
+  <div>
+    <div id="nAviso"></div>
+    <div class="hero" id="nHero"></div>
+    <div class="kpis" id="nKpis" style="margin-top:18px"></div>
+    <div class="panel" style="margin-top:18px">
+      <h2>Años <span class="tag">días fuera y cómo tributas</span></h2>
+      <div id="nAnios"></div>
+      <p class="note">Si un año pasas de 183 días fuera, ese año se calcula como si tributaras todo en España: el país de destino cobra sus impuestos e IDOM te iguala a lo de aquí.</p>
+    </div>
+    <div class="panel">
+      <h2>Mes a mes <span class="tag">lo que entra en tu cuenta</span></h2>
+      <div class="scrollx"><table class="cal" id="nTabla"></table></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ================= 2 · BALANCE ================= -->
+<section id="t-balance" hidden>
+<div class="grid">
+  <div class="panel" id="formB">
+    <div class="bloque">
+      <h3>Dinero</h3>
+      <div class="row2">
+        <div class="field"><label class="lab" for="sFecha">Fecha</label><input type="date" id="sFecha"></div>
+        <div class="field"><label class="lab" for="sImporte">Saldo en cuenta (€)</label><input type="number" id="sImporte" step="0.01"></div>
+      </div>
+      <div class="field"><label class="lab" for="sGastos">Gastos de vida al mes (€)</label><input type="number" id="sGastos" step="10">
+        <div class="hint">Se restan el día 1 de cada mes en el que no hayas apuntado otro importe de «Gastos de vida».</div></div>
+      <button class="btn ok" type="button" id="sGuardar">Guardar saldo</button>
+      <div class="hint">Al guardar un saldo nuevo, lo que ya estaba previsto antes de esa fecha sigue pendiente hasta que lo marques como hecho.</div>
+    </div>
+    <div class="bloque">
+      <h3 id="dTitulo">Añadir deuda</h3>
+      <form id="dForm">
+        <div class="field"><label class="lab" for="dNombre">Nombre</label><input type="text" id="dNombre" required maxlength="60" placeholder="Ej.: préstamo del coche"></div>
+        <div class="row2">
+          <div class="field"><label class="lab" for="dBloque">Tipo</label>
+            <select id="dBloque">
+              <option value="fijo">Fija (no se aplaza)</option>
+              <option value="aplazable">Aplazable (se paga y se vuelve a pedir)</option>
+              <option value="amigo">Amigos y familia</option>
+              <option value="aparte">Cuota aparte (no cuenta en el total)</option>
+            </select></div>
+          <div class="field"><label class="lab" for="dPendiente">Debes hoy (€)</label><input type="number" id="dPendiente" step="0.01" min="0" required></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label class="lab" for="dCuota">Cuota al mes (€, opcional)</label><input type="number" id="dCuota" step="0.01" min="0"></div>
+          <div class="field"><label class="lab" for="dDia">Día de pago</label><input type="number" id="dDia" min="1" max="28" value="1"></div>
+        </div>
+        <div class="field"><label class="lab" for="dNotas">Notas</label><input type="text" id="dNotas" maxlength="240"></div>
+        <div class="acciones"><button class="btn ok" type="submit" id="dGuardar">Añadir deuda</button><button class="btn" type="button" id="dCancelar" hidden>Cancelar</button></div>
+        <div class="hint">Con cuota, el plan añade sus pagos cada mes hasta saldarla (después del último pago que hayas apuntado a mano).</div>
+      </form>
+    </div>
+    <div class="bloque">
+      <h3>Añadir movimiento previsto</h3>
+      <form id="mForm">
+        <div class="row2">
+          <div class="field"><label class="lab" for="mFecha">Fecha</label><input type="date" id="mFecha" required></div>
+          <div class="field"><label class="lab" for="mTipo">Tipo</label>
+            <select id="mTipo">
+              <option value="pago">Pago de una deuda</option>
+              <option value="gasto">Gasto</option>
+              <option value="ingreso">Ingreso</option>
+              <option value="prestamo">Préstamo (entra dinero y se debe)</option>
+              <option value="aplazado">Aplazar (pagar y volver a pedir)</option>
+            </select></div>
+        </div>
+        <div class="field"><label class="lab" for="mConcepto">Concepto</label><input type="text" id="mConcepto" required maxlength="120"></div>
+        <div class="row2">
+          <div class="field"><label class="lab" for="mImporte">Importe (€)</label><input type="number" id="mImporte" step="0.01" min="0" required></div>
+          <div class="field"><label class="lab" for="mDeuda">Deuda</label><select id="mDeuda"></select></div>
+        </div>
+        <div class="row2 solo-prestamo">
+          <div class="field"><label class="lab" for="mDebe">A devolver (€)</label><input type="number" id="mDebe" step="0.01" min="0"></div>
+        </div>
+        <label class="check solo-pago"><input type="checkbox" id="mCierra"> Este pago salda la deuda entera</label>
+        <div class="acciones" style="margin-top:12px"><button class="btn ok" type="submit">Añadir</button></div>
+      </form>
+    </div>
+  </div>
+  <div>
+    <div class="kpis" id="bKpis"></div>
+    <div class="panel diario" style="margin-top:18px">
+    <h2>Cuéntame qué ha pasado <span class="tag">lo apunto y te explico cómo te afecta</span></h2>
+    <div class="msgs" id="msgs" aria-live="polite"></div>
+    <div class="quick" id="chips">
+      <button type="button">Mi saldo es 650 €</button>
+      <button type="button">He pagado la cuota del préstamo</button>
+      <button type="button">Me ha llegado la nómina, 2.540 €</button>
+      <button type="button">En noviembre estaré 20 días fuera</button>
+      <button type="button">Vuelvo definitivamente el 15 de junio</button>
+      <button type="button">Me suben un 5 % en enero</button>
+      <button type="button">Debo 200 € a Jon</button>
+    </div>
+    <form class="composer" id="form">
+      <textarea id="input" rows="2" placeholder="Ej.: he pagado el préstamo y ahora tengo 420 € en la cuenta" aria-label="Qué ha pasado"></textarea>
+      <button class="btn ok" id="send" type="submit">Apuntar</button>
+    </form>
+    <div class="hechos-bar"><button class="btn mini" type="button" id="clearChat">Borrar conversación</button></div>
+  </div>
+    <div class="panel">
+      <h2>Deudas <span class="tag">lo que debes hoy</span></h2>
+      <div id="bDeudas"></div>
+    </div>
+    <div class="panel">
+      <h2>Tus movimientos previstos <span class="tag">los que has apuntado tú</span></h2>
+      <div class="lista" id="bMovs"></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ================= 3 · PLAN DE PAGOS ================= -->
+<section id="t-pagos" hidden>
+  <div class="kpis" id="pKpis"></div>
+  <div class="panel" style="margin-top:18px">
+    <div class="dash-head"><h2 style="border:0;margin:0;padding:0">Saldo previsto <span class="tag">día a día, si se cumple el plan</span></h2>
+      <div class="seg" id="segRango" style="width:auto"><button type="button" data-v="6" aria-pressed="true">6 meses</button><button type="button" data-v="todo" aria-pressed="false">Todo</button></div></div>
+    <div id="pSaldo" class="chartbox"></div>
+  </div>
+  <div class="dos">
+    <div class="panel">
+      <h2>Próximos 45 días <span class="tag">marca «Hecho» cuando lo pagues o cobres</span></h2>
+      <div class="lista" id="pProx"></div>
+    </div>
+    <div class="panel">
+      <h2>Deuda a fin de mes <span class="tag">sin las cuotas aparte</span></h2>
+      <div id="pDeuda" class="chartbox" style="margin-top:0"></div>
+      <div class="legend" id="pLeyenda"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Mes a mes</h2>
+    <div class="scrollx"><table class="cal" id="pTabla"></table></div>
+  </div>
+</section>
+
+<footer>
+  <p>Cálculo orientativo con las tablas de Bizkaia 2026 y los datos de tu estancia en la calculadora. Tus datos no salen de este navegador: usa «Guardar copia» para tener un respaldo o pasarlos a otro dispositivo.</p>
+</footer>
+</div>
+
+<script src="datos.js"></script>
+<script src="motor.js"></script>
+<script src="params.js"></script>
+<script src="plan.js"></script>
+</body>
+</html>

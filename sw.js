@@ -1,7 +1,7 @@
-/* Service worker: guarda la calculadora para que funcione sin conexión.
+/* Service worker: guarda la calculadora y «Mi plan» para que funcione sin conexión.
    La página se pide primero a la red (para recibir las actualizaciones) y, si no hay conexión, sale de la caché. */
-const CACHE='calculadora-idom-2026-10-25 12:29';
-const BASICOS=['./','./calculadora-idom.html','./manifest.webmanifest','./icono.svg','./icono-192.png','./icono-512.png','./icono-180.png'];
+const CACHE='calculadora-idom-2026-10-25 16:47';
+const BASICOS=['./','./calculadora-idom.html','./plan.html','./manifest.webmanifest','./icono.svg','./icono-192.png','./icono-512.png','./icono-180.png'];
 
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>Promise.all(BASICOS.map(u=>c.add(u).catch(()=>{})))));

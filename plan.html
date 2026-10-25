@@ -1,0 +1,1854 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0061A8">
+<title>Mi plan · Calculadora IDOM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icono.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icono-180.png">
+<style>
+  :root{
+    /* paleta azul IDOM: cambia --teal para ajustar el azul corporativo */
+    --paper:#E8EEF5;
+    --card:#FBFCFE;
+    --ink:#0F1E33;
+    --muted:#5B6B82;
+    --line:#C5D1E0;
+    --line-soft:#DFE6EF;
+    --red:#B3261E;
+    --teal:#0061A8;
+    --gold:#5B9BD5;
+    --tint:#EAF2FB;
+    --warn-bg:#FBEAE8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Instrument Sans",system-ui,sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;
+  }
+  .wrap{max-width:1240px;margin:0 auto;padding:32px 16px 64px}
+
+  header{border-bottom:3px solid var(--teal);padding-bottom:14px;margin-bottom:22px;
+    display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between}
+  h1{font-size:26px;font-weight:600;letter-spacing:-.02em;margin:0 0 4px}
+  header p{margin:0;color:var(--muted);max-width:70ch;font-size:14px}
+  .acciones{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{font:inherit;font-size:13px;padding:8px 12px;border:1px solid var(--ink);background:var(--card);
+    color:var(--ink);cursor:pointer;border-radius:2px}
+  .btn:hover{background:var(--ink);color:#fff}
+  .btn.reset{border-color:var(--red);color:var(--red)}
+  .btn.reset:hover{background:var(--red);color:#fff}
+  .btn.ok{background:var(--teal);border-color:var(--teal);color:#fff}
+  a.btn{display:inline-block;text-decoration:none}
+  .btn.plan-link{border-color:var(--teal);color:var(--teal);font-weight:600}
+  .btn.plan-link:hover{background:var(--teal);color:#fff}
+
+  .grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:24px;align-items:start}
+  @media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+  .grid > *{min-width:0}
+  body.m-estancia .wrap{max-width:1680px}
+  body.m-estancia .grid{grid-template-columns:320px minmax(0,1fr)}
+  @media (max-width:900px){body.m-estancia .grid{grid-template-columns:minmax(0,1fr)}}
+  .dos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:18px}
+  .dos > .panel{margin-top:0 !important}
+  @media (max-width:1150px){.dos{grid-template-columns:minmax(0,1fr)}}
+  #eCalPanel .scrollx table{min-width:1000px}
+  #eAnios td{padding-right:12px}
+  #eResumen td.n{padding-left:14px}
+  #eAnios td:last-child{padding-right:0}
+  table.cal td{white-space:nowrap}
+  body.m-comparador .grid{grid-template-columns:minmax(0,1fr)}
+  .slots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+  @media (max-width:900px){.slots{grid-template-columns:minmax(0,1fr)}}
+  .slots .panel{margin-top:0 !important}
+  .cmp-slot h2 .dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:0}
+  .cmp-slot .acciones{margin:4px 0 12px}
+  .cmp-slot .btn{font-size:12.5px;padding:6px 10px}
+  .cmp-info{font-size:13px;color:var(--muted)}
+  .cmp-info b{color:var(--ink)}
+  .cmp-vacio{padding:18px;border:1px dashed var(--line);color:var(--muted);font-size:13.5px;text-align:center}
+  #cmpTabla td.n{padding-left:14px}
+  .dash-head{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+  .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line-soft);border:1px solid var(--line-soft)}
+  @media (max-width:1100px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .kpi{background:var(--card);padding:14px 16px;min-width:0}
+  .kpi .v{font-family:"Instrument Serif",Georgia,serif;font-size:34px;line-height:1.05;white-space:nowrap}
+  .kpi .l{font-size:12.5px;color:var(--muted);margin-top:4px}
+  .kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+  .kpi.main .v{color:var(--teal);font-size:44px}
+  .kpi.pos .v{color:var(--teal)}
+  @media (max-width:500px){.kpi .v{font-size:26px}.kpi.main .v{font-size:32px}}
+  table.cal tr.yrow td{background:var(--paper);font-weight:600;padding:8px 6px;white-space:normal}
+  table.cal tr.ysub td{border-top:1px solid var(--ink);font-weight:600}
+  .pill.nores{color:var(--teal);background:#E2EEF9}
+  .pill.alerta{color:var(--red);background:var(--warn-bg);white-space:nowrap}
+  .pill.res{color:var(--muted)}
+
+  .panel{background:var(--card);border:1px solid var(--line);padding:20px}
+  .panel + .panel{margin-top:18px}
+  .panel h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+    margin:22px 0 12px;padding-top:14px;border-top:1px solid var(--line-soft);font-weight:600}
+  .panel h3:first-of-type{margin-top:0;border-top:0;padding-top:0}
+
+  .field{margin-bottom:16px}
+  .field:last-child{margin-bottom:0}
+  label.lab{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .hint{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4}
+  .row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  .fechas-est{row-gap:12px;align-items:end}
+  .row2 input[type=date]{padding:8px 6px;font-size:14px}
+
+  input[type=number],input[type=date],input[type=month],input[type=text],select{
+    width:100%;font:inherit;font-variant-numeric:tabular-nums;
+    padding:8px 10px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:2px;
+  }
+  input:focus,select:focus,.seg button:focus-visible,.btn:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+  .big-input{font-size:22px;font-weight:600;padding:10px}
+
+  .seg{display:flex;border:1px solid var(--line);border-radius:2px;overflow:hidden;background:#fff}
+  .seg button{
+    flex:1;font:inherit;font-size:13px;padding:8px 4px;border:0;background:#fff;color:var(--muted);
+    cursor:pointer;border-right:1px solid var(--line-soft);
+  }
+  .seg button:last-child{border-right:0}
+  .seg button[aria-pressed=true]{background:var(--ink);color:#fff;font-weight:600}
+  .modos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:22px}
+  @media (max-width:1000px){.modos{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (max-width:700px){.modos{grid-template-columns:1fr}}
+  .modos button{font:inherit;text-align:left;cursor:pointer;background:var(--card);color:var(--ink);
+    border:1px solid var(--line);border-top:4px solid var(--line);padding:12px 14px;border-radius:2px}
+  .modos button:hover{border-color:var(--ink)}
+  .modos button b{display:block;font-size:16px;font-weight:600;margin-bottom:2px}
+  .modos button span{display:block;font-size:12.5px;color:var(--muted);line-height:1.35}
+  .modos button[aria-pressed=true]{border-color:var(--teal);border-top-color:var(--teal);background:#fff;
+    box-shadow:0 1px 0 var(--teal)}
+  .modos button[aria-pressed=true] b{color:var(--teal)}
+  tr.sec td{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+    padding-top:14px;border-bottom:1px solid var(--line)}
+
+  .check{display:flex;gap:8px;align-items:center;font-size:13.5px}
+
+  details{margin-top:18px;border-top:1px solid var(--line-soft);padding-top:12px}
+  summary{cursor:pointer;font-size:13px;color:var(--muted)}
+  summary:hover{color:var(--ink)}
+  .adv{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+  .adv .field{margin-bottom:0}
+  .adv label.lab{font-size:11.5px;font-weight:500;color:var(--muted)}
+  .adv input{padding:6px 8px;font-size:13px}
+
+  /* subidas */
+  .sub-row{display:grid;grid-template-columns:22px 74px 1fr 28px;gap:6px;align-items:center;margin-bottom:6px}
+  .sub-row .n{font-size:12px;color:var(--muted)}
+  .sub-row input{padding:6px 7px;font-size:13.5px}
+  .sub-del{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:4px;border-radius:2px}
+  .sub-del:hover{color:var(--red);background:var(--warn-bg)}
+  .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .quick button{font:inherit;font-size:12.5px;padding:6px 9px;border:1px solid var(--line);background:#fff;
+    color:var(--ink);cursor:pointer;border-radius:2px}
+  .quick button:hover{border-color:var(--ink)}
+  .vacio{font-size:13px;color:var(--muted);padding:6px 0}
+
+  /* resultados */
+  .hero{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--teal);padding:22px 24px}
+  .hero .row{display:flex;flex-wrap:wrap;gap:34px;align-items:baseline}
+  .figure{font-family:"Instrument Serif",Georgia,serif;font-size:58px;line-height:.95;letter-spacing:-.01em;color:var(--teal)}
+  .figure span{font-size:26px}
+  .fig-lab{font-size:13px;color:var(--muted);margin-top:8px;max-width:32ch}
+  .sub{font-family:"Instrument Serif",Georgia,serif;font-size:30px;line-height:1;color:var(--ink)}
+  .sub-lab{font-size:12.5px;color:var(--muted);margin-top:6px;max-width:26ch}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+  @media (max-width:760px){.cols{grid-template-columns:1fr}}
+
+  h2{font-size:14px;font-weight:600;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  h2 .tag{font-weight:400}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td,th{padding:6px 0;border-bottom:1px solid var(--line-soft);vertical-align:baseline;text-align:left;font-weight:400}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  tr.total td{border-bottom:0;border-top:2px solid var(--ink);font-weight:700;padding-top:9px}
+  tr.neg td.n,td.neg{color:var(--red)}
+  .tag{font-size:12px;color:var(--muted)}
+  .th td,thead th{color:var(--muted);font-size:12px;border-bottom:1px solid var(--line)}
+  td.pos{color:var(--teal);font-weight:600}
+
+  .note{margin-top:14px;font-size:13px;line-height:1.5;color:var(--muted);border-left:2px solid var(--gold);padding-left:12px}
+  .note b{color:var(--ink);font-weight:600}
+  .note:empty{display:none}
+
+  .scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .scrollx table{min-width:760px}
+  .ancho{overflow-x:auto}
+  .th td.n{white-space:normal}
+  td.sep,th.sep{border-left:1px solid var(--line);padding-left:8px}
+  td.warn{color:var(--red);font-weight:600}
+  tr.cliff td{background:var(--warn-bg)}
+
+  /* calendario */
+  table.cal{font-size:13px}
+  table.cal th,table.cal td{padding:5px 6px}
+  table.cal td:first-child,table.cal th:first-child{padding-left:0}
+  table.cal tr.fuera td{color:var(--muted)}
+  table.cal tr.extra td{background:var(--tint)}
+  table.cal tr.extra td:first-child{font-weight:600;padding-left:6px}
+  table.cal tfoot td{border-top:2px solid var(--ink);border-bottom:0;font-weight:700}
+  table.cal td.b{font-weight:600}
+  table.cal input.dias{width:56px;padding:3px 5px;font-size:13px;text-align:right}
+  table.cal tr.ov input.dias{border-color:var(--red);background:var(--warn-bg)}
+  .pill{display:inline-block;font-size:10.5px;padding:0 5px;border:1px solid currentColor;border-radius:2px;
+    margin-left:4px;vertical-align:1px;line-height:1.5}
+  .pill.up{color:var(--teal)}
+  .pill.dest{color:var(--gold)}
+  .yh{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin:26px 0 6px}
+  .yh:first-child{margin-top:4px}
+  .yh b{font-family:"Instrument Serif",Georgia,serif;font-size:26px;font-weight:400}
+  .resumen-anio{display:flex;flex-wrap:wrap;gap:6px 26px;font-size:13px;color:var(--muted);padding:10px 0 4px}
+  .resumen-anio b{color:var(--ink)}
+
+  .cfg{display:flex;flex-wrap:wrap;gap:6px 26px;font-size:13px;color:var(--muted);margin-top:14px;padding-top:12px;border-top:1px solid var(--line-soft)}
+  .cfg b{color:var(--ink)}
+
+  .chartbox{margin-top:18px}
+  .legend{display:flex;gap:18px;font-size:12.5px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap}
+  .key{display:inline-block;width:18px;height:2px;vertical-align:middle;margin-right:6px}
+  .key.bar{height:10px;width:10px}
+  svg{display:block;width:100%;height:auto}
+
+  .aviso{padding:16px;background:var(--warn-bg);border:1px solid #EBC4C0;color:var(--red);font-size:14px}
+
+  body:not(.m-desglose) .solo-desglose,
+  body:not(.m-subidas) .solo-subidas,
+  body:not(.m-estancia) .solo-estancia,
+  body:not(.m-comparador) .solo-comparador,
+  body.m-comparador .no-estancia,
+  body.m-comparador #form,
+  body:not(.per-custom) .solo-custom,
+  body:not(.con-est2) .solo-est2,
+  body:not(.reg-917) .solo-917,
+  body:not(.dias-fijo) .solo-dias-fijo,
+  body.m-comparador .no-comparador,
+  body:not(.euros-hoy) .solo-euros-hoy,
+  body.con-est2 .no-est2,
+  body.m-desglose .no-desglose,
+  body.m-estancia .no-estancia,
+  body.p12 .solo-14,
+  body:not(.irpf-manual) .solo-manual,
+  body:not(.irpf-tabla) .solo-tabla{display:none !important}
+
+  footer{margin-top:28px;font-size:12.5px;color:var(--muted);line-height:1.6;max-width:84ch}
+  footer p{margin:0 0 8px}
+
+  /* ================= MÓVIL ================= */
+  #barraMovil{display:none}
+  @media (max-width:900px){
+    .wrap{padding:14px 12px calc(96px + env(safe-area-inset-bottom))}
+    header{gap:10px;margin-bottom:12px;padding-bottom:10px}
+    h1{font-size:20px;line-height:1.2}
+    h1 .tag{display:block;font-size:13px !important}
+    header p{display:none}
+    .acciones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%}
+    .acciones .btn{padding:10px 8px;font-size:13px;min-height:42px}
+
+    /* pestañas compactas y fijas arriba */
+    .modos{position:sticky;top:0;z-index:20;display:flex !important;gap:6px;overflow-x:auto;
+      margin:0 -12px 14px;padding:8px 12px;background:var(--paper);scrollbar-width:none;
+      box-shadow:0 6px 10px -10px rgba(15,30,51,.5)}
+    .modos::-webkit-scrollbar{display:none}
+    .modos button{flex:0 0 auto;padding:9px 14px;border-top-width:1px;border-radius:20px;min-height:40px}
+    .modos button span{display:none}
+    .modos button b{font-size:14px;margin:0;white-space:nowrap}
+    .modos button[aria-pressed=true]{background:var(--teal);border-color:var(--teal)}
+    .modos button[aria-pressed=true] b{color:#fff}
+
+    /* tamaños táctiles y sin zoom en iPhone */
+    input[type=number],input[type=date],input[type=month],input[type=text],select,
+    .adv input,.sub-row input,table.cal input.dias{font-size:16px !important}
+    input[type=number],input[type=date],input[type=month],select{min-height:44px}
+    .big-input{font-size:22px !important}
+    .seg button{min-height:42px;font-size:14px}
+    .quick button{min-height:38px;padding:7px 12px}
+    .check{font-size:15px}
+    .check input{width:20px;height:20px}
+    .panel{padding:16px 14px}
+    .sub-row{grid-template-columns:20px 80px 1fr 36px}
+
+    /* resultados */
+    .hero{padding:16px 14px}
+    .hero .row{gap:16px 26px}
+    .figure{font-size:44px}
+    .sub{font-size:24px}
+    .kpi{padding:12px}
+    .kpi .v{font-size:24px}
+    .kpi.main .v{font-size:30px}
+    .kpi .s{font-size:11.5px}
+    h2{font-size:15px}
+
+    /* tablas: mes fijo a la izquierda al deslizar */
+    .scrollx{margin:0 -14px;padding:0 14px}
+    table.cal{font-size:12.5px}
+    table.cal th:first-child,table.cal td:first-child:not([colspan]){position:sticky;left:0;z-index:2;background:var(--card);
+      box-shadow:6px 0 6px -6px rgba(15,30,51,.25)}
+    table.cal input.dias{width:58px;min-height:36px}
+
+    /* gráficos legibles */
+    svg text{font-size:22px}
+    #chartCmp text{font-size:32px}
+
+    /* barra fija con el resultado */
+    #barraMovil{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;align-items:center;gap:10px;
+      padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;
+      box-shadow:0 -6px 18px rgba(15,30,51,.25)}
+    #barraMovil .bm-txt{flex:1;min-width:0;line-height:1.2}
+    #barraMovil .bm-v{font-family:"Instrument Serif",Georgia,serif;font-size:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #barraMovil .bm-l{font-size:11.5px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #barraMovil button{font:inherit;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,.4);background:transparent;
+      color:#fff;border-radius:20px;padding:9px 14px;min-height:40px}
+    #barraMovil button.on{background:#fff;color:var(--ink);border-color:#fff}
+  }
+
+  /* ================= INFORME (IMPRESIÓN / PDF) ================= */
+  #impresion{display:none}
+  @media print{
+    @page{size:A4;margin:12mm}
+    :root{--paper:#fff}
+    html,body{background:#fff !important}
+    body{font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .wrap{max-width:none !important;padding:0 !important}
+    header .acciones,.modos,#form,#barraMovil,.btn,.quick,details,#btnResetDias{display:none !important}
+    header{border-bottom:2px solid var(--teal);margin-bottom:8px}
+    header p{display:none}
+    h1{font-size:18px}
+    .grid,body.m-estancia .grid,body.m-comparador .grid{display:block !important}
+    #impresion{display:block;font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.5}
+    #impresion b{color:var(--ink)}
+    .panel,.hero{box-shadow:none;border-color:#c8d0dc;padding:10px 12px;margin-top:10px !important}
+    .hero,.kpis,.dos>.panel,svg{break-inside:avoid;page-break-inside:avoid}
+    .dos{display:block}
+    .scrollx,.ancho{overflow:visible !important;margin:0 !important;padding:0 !important}
+    .scrollx table,#eCalPanel .scrollx table{min-width:0 !important}
+    table{font-size:9.5px}
+    table.cal{font-size:8.5px}
+    table.cal th,table.cal td{padding:2px 3px}
+    table.cal th:first-child,table.cal td:first-child{position:static !important;box-shadow:none !important}
+    table.cal input.dias{border:0;background:none;width:auto;padding:0;font-size:8.5px !important;min-height:0;text-align:right}
+    tr{break-inside:avoid}
+    svg{max-height:200px}
+    svg text{font-size:11px !important}
+    .figure{font-size:34px}
+    .kpi .v{font-size:20px}
+    .kpi.main .v{font-size:26px}
+    footer{font-size:8.5px;max-width:none;columns:2;column-gap:20px}
+    a{color:inherit;text-decoration:none}
+    .tag{font-size:.85em}
+    #eAnios,#cmpTabla{font-size:8px}
+    #eAnios td{padding-right:5px}
+    .pill{font-size:7.5px;white-space:nowrap;padding:0 3px}
+    .hint,.note{font-size:9.5px}
+  }
+
+</style>
+<style>
+  /* «Mi plan»: usa estilos.css de la calculadora; aquí solo lo propio del plan */
+  :root{--ok:#1E7D4F;--ok-bg:#E5F3EC;--aviso:#9A5B00;--aviso-bg:#FBF1DF;
+    --fijo:#0061A8;--aplazable:#D9822B;--amigo:#2E9E6B;--aparte:#8A99AD}
+  body.plan .wrap{max-width:1480px}
+  .modos.tabs3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  @media (max-width:700px){.modos.tabs3{grid-template-columns:1fr}}
+  .grid > div > .panel:first-child{margin-top:0}
+  .grid > div > .kpis + .panel,.grid > div > .hero + .kpis{margin-top:18px}
+  .grid > div > .panel + .panel{margin-top:18px}
+  .bloque + .bloque{margin-top:22px;padding-top:16px;border-top:1px solid var(--line-soft)}
+  .bloque h3{margin-top:0 !important;border-top:0 !important;padding-top:0 !important}
+  a{color:var(--teal)}
+  a.btn{display:inline-block;text-decoration:none}
+  .btn.mini{font-size:12px;padding:4px 9px}
+  .btn.hecho{font-size:12px;padding:3px 9px;border-color:var(--teal);color:var(--teal)}
+  .btn.hecho:hover{background:var(--teal);color:#fff}
+  .btn.quitar{font-size:12px;padding:3px 8px;border-color:var(--line);color:var(--muted)}
+  .btn.quitar:hover{background:var(--red);border-color:var(--red);color:#fff}
+
+  /* ficha de la estancia */
+  .ficha{display:grid;gap:6px;font-size:13.5px}
+  .ficha div{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line-soft);padding-bottom:5px}
+  .ficha span{color:var(--muted)}
+  .ficha b{font-weight:600;text-align:right}
+
+  /* años */
+  .anio{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line-soft);font-size:13.5px}
+  .anio:last-child{border-bottom:0}
+  .anio b.y{font-family:"Instrument Serif",Georgia,serif;font-size:22px;font-weight:400;min-width:52px}
+  .estado{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:2px}
+  .estado.ok{color:var(--ok);background:var(--ok-bg)}
+  .estado.aviso{color:var(--aviso);background:var(--aviso-bg)}
+  .estado.mal{color:var(--red);background:var(--warn-bg)}
+  .estado.neutro{color:var(--muted);background:var(--paper)}
+
+  /* listas */
+  .lista{display:grid}
+  .fila{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+  .fila:last-child{border-bottom:0}
+  .fila .f{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .fila small{display:block;color:var(--muted);font-size:12px}
+  .fila .a{text-align:right;display:flex;gap:8px;align-items:center;justify-content:flex-end;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .entra{color:var(--ok);font-weight:600}
+  .grupo{margin-top:16px}
+  .grupo:first-child{margin-top:0}
+  .grupo-hd{display:flex;justify-content:space-between;gap:10px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+    padding-bottom:6px;border-bottom:1px solid var(--line);font-weight:600}
+  .grupo-hd i,.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+  .deuda{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+  .deuda small{grid-column:1/-1;color:var(--muted);font-size:12px}
+  .deuda .n{font-variant-numeric:tabular-nums;text-align:right}
+  .deuda .acc{display:flex;gap:6px}
+  .row-ctl{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+
+  /* cuéntame */
+  .msgs{max-height:380px;min-height:90px;overflow-y:auto;display:flex;flex-direction:column;gap:9px;padding:4px 0 12px}
+  .msg{max-width:92%;padding:9px 12px;font-size:14px;overflow-wrap:anywhere;border-radius:2px}
+  .msg.u{align-self:flex-end;background:var(--teal);color:#fff;white-space:pre-wrap}
+  .msg.a{align-self:flex-start;background:var(--tint);border:1px solid var(--line-soft)}
+  .msg.a p{margin:0 0 6px}.msg.a p:last-child{margin-bottom:0}
+  .msg.a ul{margin:2px 0 6px;padding-left:18px}
+  .msg.imp{align-self:stretch;max-width:none;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--teal);font-size:13px;display:grid;gap:2px}
+  .msg.imp b{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px}
+  .msg.imp .sub{padding-left:12px;color:var(--muted)}
+  .msg.imp .mal{color:var(--red);font-weight:600}
+  .composer{display:flex;gap:8px;align-items:flex-end;margin-top:10px}
+  .composer textarea{flex:1;min-width:0;resize:vertical;font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:2px;background:#fff;color:var(--ink);min-height:44px}
+  .composer textarea:focus{outline:2px solid var(--teal);outline-offset:1px}
+  .hechos-bar{display:flex;justify-content:flex-end;margin-top:8px}
+
+  body:not(.t-prestamo) .solo-prestamo,
+  body:not(.t-pago) .solo-pago{display:none !important}
+  .vacio-grande{padding:22px;border:1px dashed var(--line);color:var(--muted);text-align:center;font-size:14px}
+  @media (max-width:900px){
+    .msgs{max-height:320px}
+    .fila{grid-template-columns:52px minmax(0,1fr) auto}
+  }
+</style>
+</head>
+<body class="plan">
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>Mi plan <span class="tag" style="font-size:15px;font-weight:400">· nómina, balance y plan de pagos</span></h1>
+    <p>La nómina sale de tu estancia en la <a href="calculadora-idom.html">Calculadora IDOM</a>. Apunta tu dinero y tus deudas, a mano o escribiendo, y el plan de pagos se recalcula solo. Todo se guarda solo en este navegador.</p>
+  </div>
+  <div class="acciones">
+    <a class="btn" href="calculadora-idom.html">← Calculadora</a>
+    <button class="btn" type="button" id="btnExportar">Guardar copia</button>
+    <button class="btn" type="button" id="btnImportar">Cargar copia</button>
+    <input type="file" id="fichero" accept=".json,application/json" hidden>
+    <button class="btn" type="button" id="btnDeshacer" hidden>Deshacer</button>
+  </div>
+</header>
+
+<nav class="modos tabs3" id="tabs" aria-label="Pestañas">
+  <button type="button" data-tab="nomina" aria-pressed="true"><b>1 · Nómina</b><span>Lo que cobras cada mes según tu estancia</span></button>
+  <button type="button" data-tab="balance" aria-pressed="false"><b>2 · Balance</b><span>Tu dinero y tus deudas: a mano o escribiendo</span></button>
+  <button type="button" data-tab="pagos" aria-pressed="false"><b>3 · Plan de pagos</b><span>Saldo previsto, próximos pagos y fin de las deudas</span></button>
+</nav>
+
+<!-- ================= 1 · NÓMINA ================= -->
+<section id="t-nomina">
+<div class="grid">
+  <div class="panel" id="formN">
+    <h3>Tu estancia</h3>
+    <div id="nFuente" class="hint" style="margin:-4px 0 12px"></div>
+    <div id="nCfg" class="ficha"></div>
+    <h3>Proyección</h3>
+    <div class="field"><label class="lab" for="horizonte">Meses a proyectar</label>
+      <select id="horizonte">
+        <option value="12">12 meses</option><option value="15">15 meses</option><option value="18">18 meses</option>
+        <option value="24">24 meses</option><option value="36">36 meses</option>
+      </select>
+      <div class="hint">Desde el mes de tu saldo. Lo que cobras pasa solo al plan de pagos.</div></div>
+    <a class="btn" href="calculadora-idom.html" style="display:inline-block;text-decoration:none">Cambiar la estancia en la calculadora</a>
+    <div class="hint">O cuéntalo en la pestaña Balance: «vuelvo el 15 de junio», «en marzo estaré 10 días fuera», «me suben un 5 % en enero».</div>
+  </div>
+  <div>
+    <div id="nAviso"></div>
+    <div class="hero" id="nHero"></div>
+    <div class="kpis" id="nKpis" style="margin-top:18px"></div>
+    <div class="panel" style="margin-top:18px">
+      <h2>Años <span class="tag">días fuera y cómo tributas</span></h2>
+      <div id="nAnios"></div>
+      <p class="note">Si un año pasas de 183 días fuera, ese año se calcula como si tributaras todo en España: el país de destino cobra sus impuestos e IDOM te iguala a lo de aquí.</p>
+    </div>
+    <div class="panel">
+      <h2>Mes a mes <span class="tag">lo que entra en tu cuenta</span></h2>
+      <div class="scrollx"><table class="cal" id="nTabla"></table></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ================= 2 · BALANCE ================= -->
+<section id="t-balance" hidden>
+<div class="grid">
+  <div class="panel" id="formB">
+    <div class="bloque">
+      <h3>Dinero</h3>
+      <div class="row2">
+        <div class="field"><label class="lab" for="sFecha">Fecha</label><input type="date" id="sFecha"></div>
+        <div class="field"><label class="lab" for="sImporte">Saldo en cuenta (€)</label><input type="number" id="sImporte" step="0.01"></div>
+      </div>
+      <div class="field"><label class="lab" for="sGastos">Gastos de vida al mes (€)</label><input type="number" id="sGastos" step="10">
+        <div class="hint">Se restan el día 1 de cada mes en el que no hayas apuntado otro importe de «Gastos de vida».</div></div>
+      <button class="btn ok" type="button" id="sGuardar">Guardar saldo</button>
+      <div class="hint">Al guardar un saldo nuevo, lo que ya estaba previsto antes de esa fecha sigue pendiente hasta que lo marques como hecho.</div>
+    </div>
+    <div class="bloque">
+      <h3 id="dTitulo">Añadir deuda</h3>
+      <form id="dForm">
+        <div class="field"><label class="lab" for="dNombre">Nombre</label><input type="text" id="dNombre" required maxlength="60" placeholder="Ej.: préstamo del coche"></div>
+        <div class="row2">
+          <div class="field"><label class="lab" for="dBloque">Tipo</label>
+            <select id="dBloque">
+              <option value="fijo">Fija (no se aplaza)</option>
+              <option value="aplazable">Aplazable (se paga y se vuelve a pedir)</option>
+              <option value="amigo">Amigos y familia</option>
+              <option value="aparte">Cuota aparte (no cuenta en el total)</option>
+            </select></div>
+          <div class="field"><label class="lab" for="dPendiente">Debes hoy (€)</label><input type="number" id="dPendiente" step="0.01" min="0" required></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label class="lab" for="dCuota">Cuota al mes (€, opcional)</label><input type="number" id="dCuota" step="0.01" min="0"></div>
+          <div class="field"><label class="lab" for="dDia">Día de pago</label><input type="number" id="dDia" min="1" max="28" value="1"></div>
+        </div>
+        <div class="field"><label class="lab" for="dNotas">Notas</label><input type="text" id="dNotas" maxlength="240"></div>
+        <div class="acciones"><button class="btn ok" type="submit" id="dGuardar">Añadir deuda</button><button class="btn" type="button" id="dCancelar" hidden>Cancelar</button></div>
+        <div class="hint">Con cuota, el plan añade sus pagos cada mes hasta saldarla (después del último pago que hayas apuntado a mano).</div>
+      </form>
+    </div>
+    <div class="bloque">
+      <h3>Añadir movimiento previsto</h3>
+      <form id="mForm">
+        <div class="row2">
+          <div class="field"><label class="lab" for="mFecha">Fecha</label><input type="date" id="mFecha" required></div>
+          <div class="field"><label class="lab" for="mTipo">Tipo</label>
+            <select id="mTipo">
+              <option value="pago">Pago de una deuda</option>
+              <option value="gasto">Gasto</option>
+              <option value="ingreso">Ingreso</option>
+              <option value="prestamo">Préstamo (entra dinero y se debe)</option>
+              <option value="aplazado">Aplazar (pagar y volver a pedir)</option>
+            </select></div>
+        </div>
+        <div class="field"><label class="lab" for="mConcepto">Concepto</label><input type="text" id="mConcepto" required maxlength="120"></div>
+        <div class="row2">
+          <div class="field"><label class="lab" for="mImporte">Importe (€)</label><input type="number" id="mImporte" step="0.01" min="0" required></div>
+          <div class="field"><label class="lab" for="mDeuda">Deuda</label><select id="mDeuda"></select></div>
+        </div>
+        <div class="row2 solo-prestamo">
+          <div class="field"><label class="lab" for="mDebe">A devolver (€)</label><input type="number" id="mDebe" step="0.01" min="0"></div>
+        </div>
+        <label class="check solo-pago"><input type="checkbox" id="mCierra"> Este pago salda la deuda entera</label>
+        <div class="acciones" style="margin-top:12px"><button class="btn ok" type="submit">Añadir</button></div>
+      </form>
+    </div>
+  </div>
+  <div>
+    <div class="kpis" id="bKpis"></div>
+    <div class="panel diario" style="margin-top:18px">
+    <h2>Cuéntame qué ha pasado <span class="tag">lo apunto y te explico cómo te afecta</span></h2>
+    <div class="msgs" id="msgs" aria-live="polite"></div>
+    <div class="quick" id="chips">
+      <button type="button">Mi saldo es 650 €</button>
+      <button type="button">He pagado la cuota del préstamo</button>
+      <button type="button">Me ha llegado la nómina, 2.540 €</button>
+      <button type="button">En noviembre estaré 20 días fuera</button>
+      <button type="button">Vuelvo definitivamente el 15 de junio</button>
+      <button type="button">Me suben un 5 % en enero</button>
+      <button type="button">Debo 200 € a Jon</button>
+    </div>
+    <form class="composer" id="form">
+      <textarea id="input" rows="2" placeholder="Ej.: he pagado el préstamo y ahora tengo 420 € en la cuenta" aria-label="Qué ha pasado"></textarea>
+      <button class="btn ok" id="send" type="submit">Apuntar</button>
+    </form>
+    <div class="hechos-bar"><button class="btn mini" type="button" id="clearChat">Borrar conversación</button></div>
+  </div>
+    <div class="panel">
+      <h2>Deudas <span class="tag">lo que debes hoy</span></h2>
+      <div id="bDeudas"></div>
+    </div>
+    <div class="panel">
+      <h2>Tus movimientos previstos <span class="tag">los que has apuntado tú</span></h2>
+      <div class="lista" id="bMovs"></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ================= 3 · PLAN DE PAGOS ================= -->
+<section id="t-pagos" hidden>
+  <div class="kpis" id="pKpis"></div>
+  <div class="panel" style="margin-top:18px">
+    <div class="dash-head"><h2 style="border:0;margin:0;padding:0">Saldo previsto <span class="tag">día a día, si se cumple el plan</span></h2>
+      <div class="seg" id="segRango" style="width:auto"><button type="button" data-v="6" aria-pressed="true">6 meses</button><button type="button" data-v="todo" aria-pressed="false">Todo</button></div></div>
+    <div id="pSaldo" class="chartbox"></div>
+  </div>
+  <div class="dos">
+    <div class="panel">
+      <h2>Próximos 45 días <span class="tag">marca «Hecho» cuando lo pagues o cobres</span></h2>
+      <div class="lista" id="pProx"></div>
+    </div>
+    <div class="panel">
+      <h2>Deuda a fin de mes <span class="tag">sin las cuotas aparte</span></h2>
+      <div id="pDeuda" class="chartbox" style="margin-top:0"></div>
+      <div class="legend" id="pLeyenda"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Mes a mes</h2>
+    <div class="scrollx"><table class="cal" id="pTabla"></table></div>
+  </div>
+</section>
+
+<footer>
+  <p>Cálculo orientativo con las tablas de Bizkaia 2026 y los datos de tu estancia en la calculadora. Tus datos no salen de este navegador: usa «Guardar copia» para tener un respaldo o pasarlos a otro dispositivo.</p>
+</footer>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   DATOS
+   ============================================================ */
+/* Tabla general de retención, Bizkaia 2026: [hasta, [0,1,2,3,4,5,6+ descendientes]] */
+const TABLA=[
+[20000,[0,0,0,0,0,0,0]],[20510,[7,5,3,0,0,0,0]],[21300,[8,6,4,1,0,0,0]],
+[22150,[9,7,5,2,0,0,0]],[23220,[10,9,7,4,0,0,0]],[24050,[11,10,8,5,1,0,0]],
+[25410,[12,11,9,6,3,0,0]],[27440,[13,12,10,7,4,0,0]],[29790,[14,13,11,9,6,2,0]],
+[32610,[15,14,13,10,8,4,0]],[36350,[16,15,14,12,9,6,0]],[40670,[17,16,15,13,11,8,0]],
+[44560,[18,17,16,15,13,10,2]],[48060,[19,18,17,16,14,12,4]],[52020,[20,19,18,17,15,13,7]],
+[56780,[21,20,20,18,17,15,9]],[61820,[22,21,21,20,18,16,11]],[65710,[23,22,22,21,19,18,12]],
+[70080,[24,23,23,22,21,19,14]],[75020,[25,25,24,23,22,20,16]],[80730,[26,26,25,24,23,22,17]],
+[86770,[27,27,26,25,24,23,19]],[92190,[28,28,27,26,25,24,21]],[98350,[29,29,28,27,27,25,22]],
+[105380,[30,30,29,29,28,27,23]],[113180,[31,31,30,30,29,28,25]],[122030,[32,32,31,31,30,29,26]],
+[132200,[33,33,32,32,31,30,28]],[144140,[34,34,33,33,32,32,29]],[157300,[35,35,34,34,33,33,31]],
+[172280,[36,36,36,35,35,34,32]],[190410,[37,37,37,36,36,35,33]],[212820,[38,38,38,37,37,36,35]],
+[236060,[39,39,39,38,38,37,36]],[Infinity,[40,40,40,39,39,39,37]]];
+
+/* Reducciones por discapacidad: [hasta, [apartado 4.a), apartados 4.b) y 4.c)]] */
+const DISCAP=[[25410,[9,12]],[32610,[7,12]],[48060,[6,10]],[56780,[5,10]],
+[80730,[4,8]],[122030,[3,6]],[190410,[2,5]],[Infinity,[1,3]]];
+
+/* [país, dieta diaria €, % plus del país] */
+const PAISES=[
+  ["Argelia",29,0.35],["Egipto",32,0.25],
+  ["Angola",47,0.35],["Etiopía",30,0.35],["Sudáfrica",30,0.20],["Tanzania",36,0.35],
+  ["Canadá",44,0.15],["Estados Unidos",49,0.15],
+  ["Estados Unidos - Atlanta",56,0.15],["Estados Unidos - Minneapolis",51,0.15],
+  ["México",34,0.25],
+  ["Costa Rica",39,0.20],["República Dominicana",36,0.25],["Guatemala",40,0.25],
+  ["Honduras",33,0.45],["Nicaragua",30,0.35],["Panamá",38,0.20],
+  ["Argentina",41,0.20],["Bolivia",33,0.35],["Brasil",32,0.25],
+  ["Brasil - Sao Paulo",37,0.25],["Brasil - Rio de Janeiro",35,0.25],
+  ["Chile",37,0.15],["Colombia",27,0.25],["Ecuador",40,0.25],
+  ["Perú",34,0.25],["Uruguay",44,0.15],
+  ["Arabia Saudita",50,0.25],["Bahréin",42,0.20],
+  ["Emiratos Árabes Unidos",48,0.15],["Israel",58,0.20],
+  ["Jordania",42,0.20],["Kuwait",39,0.20],["Omán",40,0.20],["Qatar",40,0.15],
+  ["China",49,0.30],["Corea del Sur",47,0.15],["Hong Kong",55,0.15],
+  ["Japón",43,0.15],["Japón - Tokio",44,0.15],["Macao",49,0.15],
+  ["Mongolia",36,0.35],["Taiwán",42,0.15],
+  ["Bangladesh",38,0.35],["India",31,0.35],["Irán",89,0.25],
+  ["Filipinas",37,0.25],["Laos",31,0.30],["Malasia",32,0.20],["Vietnam",36,0.30],
+  ["Kazajistán",26,0.35],
+  ["Alemania",44,0.15],["Bélgica",45,0.15],["Dinamarca",54,0.15],
+  ["Eslovaquia",40,0.20],["Eslovenia",38,0.20],["España",36,0.15],
+  ["Francia",41,0.15],["Francia - París",43,0.15],["Grecia",39,0.15],
+  ["Holanda",46,0.15],["Irlanda",42,0.15],["Italia",42,0.15],
+  ["Lituania",38,0.20],["Luxemburgo",43,0.15],["Polonia",32,0.15],
+  ["Portugal",39,0.15],["Reino Unido",42,0.15],["Reino Unido - Londres",44,0.15],
+  ["Suecia",44,0.15],
+  ["Federación Rusa",36,0.25],["Federación Rusa - Moscú",36,0.25],
+  ["Macedonia",29,0.20],["Turquía",23,0.20],
+  ["Australia",40,0.15],["Nueva Zelanda",39,0.15],
+];
+
+const MESES=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const MESES_L=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+
+/* ============================================================
+   PARÁMETROS POR AÑO
+   ============================================================ */
+/* Año de las tablas: retenciones (DF 134/2025) y escala y minoración (NF 13/2013, redacción NF 7/2025) */
+const ANIO_BASE=2026;
+
+/* Escala general del IRPF de Bizkaia 2026: [base liquidable hasta, tipo marginal %] */
+const ESCALA=[[18080,23],[36160,28],[54240,35],[77450,40],[107260,45],[142960,46],[208390,47],[Infinity,49]];
+
+/* Minoración general de la cuota por declaración (2026) */
+const MINORACION=1615;
+
+/* Bonificación de los rendimientos del trabajo (art. 23 NF 13/2013, desde 2025):
+   8.000 € hasta 14.800 € de rendimiento neto; de ahí a 23.000 €, 8.000 − 0,6098 × exceso; después, 3.000 € */
+const BONIF_TRABAJO={hasta:14800, max:8000, coef:0.6098, tope:23000, min:3000};
+
+/* Exención por trabajos efectivamente realizados en el extranjero (art. 9.17 NF 13/2013): límite anual */
+const LIMITE_917=60100;
+
+/* Cuota obrera del MEI (mecanismo de equidad intergeneracional) por año, en %. Sube hasta 2029 */
+const MEI_OBRERO={2023:0.10,2024:0.12,2025:0.13,2026:0.15,2027:0.17,2028:0.18,2029:0.20};
+
+
+</script>
+<script>
+"use strict";
+/* ============================================================
+   FORMATO
+   ============================================================ */
+const nf2=new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'});
+const nf0=new Intl.NumberFormat('es-ES',{maximumFractionDigits:0,useGrouping:'always'});
+const nfx=new Intl.NumberFormat('es-ES',{maximumFractionDigits:2,useGrouping:'always'});
+const eur=n=>nf2.format(n)+' €';
+const eur0=n=>nf0.format(n)+' €';
+const pct=n=>nf2.format(n)+' %';          // n ya en porcentaje
+const milar=n=>nfx.format(n);
+const menos=v=>v>0.004?'−'+eur(v):'—';
+const signo=(n,f)=>(n>=0?'+':'−')+f(Math.abs(n));
+const mesLabel=i=>MESES[((i%12)+12)%12]+' '+Math.floor(i/12);
+const ymKey=i=>Math.floor(i/12)+'-'+String(i%12+1).padStart(2,'0');
+
+/* Las fechas se leen a mano para no depender de la zona horaria del navegador */
+function parseFecha(s){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||''); if(!m)return null;
+  const y=+m[1],mo=+m[2],d=+m[3];
+  if(mo<1||mo>12||d<1||d>diasMes(y,mo))return null;
+  return {y,m:mo,d,i:y*12+mo-1};
+}
+function parseYM(s){
+  const m=/^(\d{4})-(\d{1,2})$/.exec(s||''); if(!m)return NaN;
+  const mo=+m[2]; if(mo<1||mo>12)return NaN;
+  return +m[1]*12+mo-1;
+}
+function diasMes(y,m){return new Date(y,m,0).getDate();}
+
+/* ============================================================
+   IRPF
+   ============================================================ */
+function filaTabla(b){return TABLA.find(r=>b<=r[0]);}
+function reduccion(b,disc){return disc===0?0:DISCAP.find(r=>b<=r[0])[1][disc-1];}
+function tipoUnico(b,desc,disc){return Math.max(0,filaTabla(b)[1][Math.min(desc,6)]-reduccion(b,disc));}
+function irpfProgresivo(b,desc,disc){
+  let acc=0,prev=0;
+  for(const r of TABLA){
+    const top=Math.min(b,r[0]);
+    if(top>prev){
+      const t=Math.max(0,r[1][Math.min(desc,6)]-reduccion(prev+0.01,disc));
+      acc+=(top-prev)*t/100; prev=top;
+    }
+    if(b<=r[0])break;
+  }
+  return acc;
+}
+/* ---------- parámetros que cambian con el año ---------- */
+const aniosDesdeBase=y=>Math.max(0,(y||ANIO_BASE)-ANIO_BASE);
+/* Factor para actualizar con el IPC los tramos y bases de años posteriores a las tablas */
+function factorIPC(P,y){ return P.indexar?Math.pow(1+P.ipc,aniosDesdeBase(y)):1; }
+function meiObrero(y){
+  y=y||ANIO_BASE;
+  if(MEI_OBRERO[y]!=null) return MEI_OBRERO[y];
+  return y<2023?0.10:0.20;
+}
+/* Cuota obrera del año: la que hay en el panel (2026) más lo que sube el MEI */
+function tipoSS(P,y){ return P.tSS+(P.meiProg?(meiObrero(y)-meiObrero(ANIO_BASE))/100:0); }
+/* Bases de cotización del año: la máxima sube IPC + 1,2 puntos al año (reforma de pensiones) */
+function basesSS(P,y){
+  const n=aniosDesdeBase(y);
+  if(!P.indexar||!n) return {min:P.bMin,max:P.bMax};
+  return {min:P.bMin*Math.pow(1+P.ipc,n),max:P.bMax*Math.pow(1+P.ipc+0.012,n)};
+}
+function clampBase(x,P,y){ const B=basesSS(P,y); return Math.min(Math.max(x,B.min),B.max); }
+
+/* retención anual objetivo para una base anual (tabla del año, con los tramos actualizados si toca) */
+function retencionAnual(b,P,modo,y){
+  modo=modo||P.irpf;
+  if(modo==='zero'||b<=0)return 0;
+  if(modo==='manual')return b*P.irpfManual;
+  const f=factorIPC(P,y);
+  if(modo==='prog')return irpfProgresivo(b/f,P.desc,P.disc)*f;
+  return b*tipoUnico(b/f,P.desc,P.disc)/100;
+}
+/* Euros de un año expresados en euros de hoy (año de las tablas), descontando el IPC */
+const aHoy=(v,y,P)=>v/Math.pow(1+P.ipc,(y||ANIO_BASE)-ANIO_BASE);
+function tipoTabla(b,P,y){ return tipoUnico(b/factorIPC(P,y),P.desc,P.disc); }
+
+/* ---------- declaración de la renta (estimación) ---------- */
+function bonificacionTrabajo(rn,f){
+  const B=BONIF_TRABAJO;
+  let v;
+  if(rn<=B.hasta*f) v=B.max*f;
+  else if(rn<=B.tope*f) v=B.max*f-B.coef*(rn-B.hasta*f);
+  else v=B.min*f;
+  return Math.max(0,Math.min(v,rn));
+}
+function cuotaEscala(base,f){
+  let c=0, prev=0;
+  for(const [hasta,t] of ESCALA){
+    const top=Math.min(base,hasta*f);
+    if(top>prev){ c+=(top-prev)*t/100; prev=top; }
+    if(base<=hasta*f) break;
+  }
+  return c;
+}
+/* Renta de un año a partir de su simulación: rendimientos del trabajo, sin otras rentas ni deducciones familiares */
+function rentaAnio(A,P){
+  const f=factorIPC(P,A.y), T=A.tot;
+  const integro=T.suj, exento=T.exento, gastos=T.ss;
+  const rn=Math.max(0,integro-exento-gastos);
+  const bonif=bonificacionTrabajo(rn,f);
+  const base=Math.max(0,rn-bonif);
+  const cuota=cuotaEscala(base,f);
+  const minor=Math.min(cuota,MINORACION*f);
+  const liquida=Math.max(0,cuota-minor);
+  const retenido=T.irpf;
+  return {integro,exento,gastos,rn,bonif,base,cuota,minor,liquida,retenido,resultado:liquida-retenido,
+          tipoMedio:integro>0?liquida/integro:0};
+}
+
+/* ============================================================
+   MOTOR
+   ============================================================ */
+/* Salario anual vigente en el mes absoluto i (año*12+mes-1), con las subidas encadenadas */
+function salAnual(P,i){
+  let s=P.salario0;
+  for(const sub of P.subidas) if(i>=sub.i) s*=1+sub.pct/100;
+  return s;
+}
+
+/* Meses (índices absolutos) que devenga la extra que se paga en el mes absoluto i */
+function periodoExtra(P,i){
+  const [a,b]=P.extraMeses, y=Math.floor(i/12), m=i%12+1;
+  const prev=m===a?(y-1)*12+(b-1):y*12+(a-1);
+  const out=[]; for(let k=prev+1;k<=i;k++)out.push(k);
+  return out;
+}
+/* Largo del periodo de devengo al que pertenece el mes m (1-12) */
+function largoPeriodo(P,m){
+  const [a,b]=P.extraMeses;
+  return (m>a&&m<=b)?b-a:a+12-b;
+}
+function importeExtra(P,i){
+  const per=periodoExtra(P,i);
+  return per.reduce((s,k)=>s+salAnual(P,k)/P.pagas,0)/per.length;
+}
+function infoExtra(P,i){
+  const per=periodoExtra(P,i), f=per[0], l=per[per.length-1];
+  const y0=Math.floor(f/12), y1=Math.floor(l/12);
+  let t='devengo '+MESES[f%12]+(y0!==y1?' '+y0:'')+'–'+MESES[l%12];
+  const s0=salAnual(P,f), sl=salAnual(P,l);
+  if(Math.abs(sl-s0)>0.005){
+    const nuevos=per.filter(k=>Math.abs(salAnual(P,k)-sl)<0.005).length;
+    t+=' · '+nuevos+' de '+per.length+' meses con el sueldo subido';
+  }
+  return t;
+}
+
+/* Días en destino que cuentan para plus y dietas entre los días a y b (inclusive) de un mes */
+function diasDestino(P,a,b,cub,dim){
+  if(P.modoDias==='naturales') return cub;
+  if(P.modoDias==='laborables'){
+    let n=0;
+    for(let d=a;d<=b;d++){ const w=new Date(d*864e5).getUTCDay(); if(w>0&&w<6) n++; }
+    return n;
+  }
+  return Math.round(P.diasDef*cub/dim);
+}
+/* Días en destino de un mes completo, para proyectar lo que queda de año */
+const diasMesTipico=P=>P.modoDias==='naturales'?30.44:P.modoDias==='laborables'?21.75:P.diasDef;
+
+/* Situación de un mes respecto a las estancias (una o dos) */
+const diaNum=(y,m,d)=>Date.UTC(y,m-1,d)/864e5;
+const solapeDias=(a0,a1,b0,b1)=>Math.max(0,Math.min(a1,b1)-Math.max(a0,b0)+1);
+const tramosOk=P=>(P.estancias||[]).filter(t=>isFinite(t.a)&&isFinite(t.b)&&t.b>=t.a);
+function situacion(P,y,m,est){
+  if(!est)return {dias:0,fin:false,sit:'origen',partes:[]};
+  const i=y*12+m-1, dim=diasMes(y,m), m0=diaNum(y,m,1), m1=diaNum(y,m,dim);
+  const T=tramosOk(P);
+  const partes=[];
+  for(const t of T){
+    const cub=solapeDias(m0,m1,t.a,t.b);
+    if(cub>0){
+      const a=Math.max(m0,t.a), b=Math.min(m1,t.b);
+      partes.push({t,cub,d0:a-m0+1,d1:b-m0+1,dias:diasDestino(P,a,b,cub,dim)});
+    }
+  }
+  if(!partes.length){
+    const sit=!T.length||m1<T[0].a?'antes':m0>T[T.length-1].b?'despues':'entre';
+    return {dias:0,fin:false,sit,partes};
+  }
+  const k=ymKey(i), ov=S.overrides[k]!=null;
+  let dias=partes.reduce((a,p)=>a+p.dias,0);
+  if(ov){
+    const v=S.overrides[k];
+    if(dias>0) partes.forEach(p=>p.dias=v*p.dias/dias); else partes[0].dias=v;
+    dias=v;
+  }
+  const finT=T.find(t=>t.a<=m1&&t.b>m1)||null;
+  let sit;
+  if(partes.length>1) sit='varias';
+  else{
+    const p=partes[0], ini=p.d0>1, fin=p.d1<dim;
+    sit=ini&&fin?'ida-vuelta':ini?'salida':fin?'regreso':'destino';
+  }
+  return {dias,fin:!!finT,finT,sit,ov,d0:partes[0].d0,d1:partes[partes.length-1].d1,partes,dest:partes[0].t.destino};
+}
+function textoSituacion(D,P){
+  const dests=new Set(tramosOk(P).map(t=>t.destino));
+  const dest=dests.size>1&&D.dest?' · '+D.dest:'';
+  if(D.sit==='antes'||D.sit==='despues') return 'En España';
+  if(D.sit==='entre') return 'En España · vuelta intermedia';
+  if(D.sit==='varias') return 'Vuelve el '+D.partes[0].d1+' y sale el '+D.partes[1].d0;
+  return {destino:'En destino',salida:'Sale el '+D.d0,regreso:'Vuelve el '+D.d1,'ida-vuelta':'Del '+D.d0+' al '+D.d1}[D.sit]+dest;
+}
+const enEspana=D=>D.sit==='antes'||D.sit==='despues'||D.sit==='entre';
+
+/* Días naturales fuera de España en el año y, sumando las estancias */
+function residencia(P,y,est){
+  const diasAnio=diaNum(y+1,1,1)-diaNum(y,1,1);
+  let fuera=0;
+  if(est) for(const t of tramosOk(P)) fuera+=solapeDias(diaNum(y,1,1),diaNum(y,12,31),t.a,t.b);
+  const espana=diasAnio-fuera;
+  const reg=P.regimen||'183';
+  const noRes=!!(est&&reg==='183'&&fuera>0&&fuera<183);
+  /* libre: lo cobrado fuera ese año no tributa en España (183 simplificada o exención 9.17) */
+  const libre=!!(est&&fuera>0&&(noRes||reg==='917'));
+  /* el país de destino puede gravar: más de 183 días allí en el año natural o coste soportado allí */
+  const destinoGrava=!!(est&&fuera>0&&(fuera>183||P.costeDestino));
+  return {fuera,espana,noRes,libre,destinoGrava};
+}
+
+/* Parte del mes absoluto i que pasas fuera (días naturales dentro de alguna estancia) */
+function fraccionFuera(P,i){
+  const y0=Math.floor(i/12), m0=i%12+1, dim=diasMes(y0,m0);
+  let f=0;
+  for(const t of tramosOk(P)) f+=solapeDias(diaNum(y0,m0,1),diaNum(y0,m0,dim),t.a,t.b);
+  return f/dim;
+}
+
+/* Un año natural mes a mes. est=true aplica la estancia (plus y dietas). */
+function simularAnio(P,y,est){
+  const meses=[];
+  const RES=residencia(P,y,est);
+  for(let m=1;m<=12;m++){
+    const i=y*12+m-1;
+    const sa=salAnual(P,i), salMes=sa/P.pagas;
+    const D=situacion(P,y,m,est);
+    const plus=D.partes.reduce((a,p)=>a+sa/365*p.t.pctPlus*p.dias,0);
+    const dieta=D.partes.reduce((a,p)=>a+p.t.dietaDia*p.dias,0);
+    let extra=0, extraInfo=null;
+    if(P.pagas===14){
+      if(P.prorr) extra=salMes/largoPeriodo(P,m);
+      else if(P.extraMeses.includes(m)){ extra=importeExtra(P,i); extraInfo=infoExtra(P,i); }
+    }
+    const variable=m===2?P.variable:0;
+    const tss=tipoSS(P,y);
+    const baseSS=clampBase(salMes*P.pagas/12+plus,P,y);
+    const ssVar=(clampBase(salMes*P.pagas/12+plus+variable,P,y)-baseSS)*tss;
+    meses.push({y,m,i,sa,salMes,D,plus,dieta,extra,extraInfo,variable,baseSS,ss:baseSS*tss,ssVar,tss,
+                subida:P.subidas.find(s=>s.i===i)});
+  }
+
+  /* IRPF con regularización mensual.
+     Exención de lo cobrado fuera (régimen 9.17, o 183 días simplificada): salario de los días fuera,
+     plus y la parte de extras y variable, con el límite anual del 9.17. El tipo sale de todo el año.
+     exRet: si la nómina ya aplica la exención en la retención (si no, se recupera en la renta). */
+  const ex=RES.libre;
+  const exRet=ex&&(P.regimen!=='917'||P.aplicaNomina);
+  const limite=P.regimen==='917'?LIMITE_917*factorIPC(P,y):Infinity;
+  const fa=i=>ex?fraccionFuera(P,i):0;
+  const raV=ex?RES.fuera/(RES.fuera+RES.espana):0;
+  let retenido=0, acum=0, acumTax=0, exentoAcum=0;
+  for(const M of meses){
+    /* las dietas no cuentan para el IRPF; el variable sí */
+    const suj=M.salMes+M.extra+M.plus+M.variable;
+    const f=fa(M.i);
+    let fExt=1;
+    if(ex){
+      if(P.prorr) fExt=1-f;
+      else if(M.extraInfo){ const per=periodoExtra(P,M.i); fExt=1-per.reduce((a,k)=>a+fa(k),0)/per.length; }
+    }
+    /* partes exentas, recortadas si se pasa del límite anual */
+    let exSal=M.salMes*f, exPlus=ex?M.plus:0, exExt=M.extra*(1-fExt), exVar=M.variable*raV;
+    const exTot=exSal+exPlus+exExt+exVar, cabe=Math.max(0,limite-exentoAcum);
+    if(exTot>cabe){ const k=exTot>0?cabe/exTot:0; exSal*=k; exPlus*=k; exExt*=k; exVar*=k; }
+    M.exento=exSal+exPlus+exExt+exVar; exentoAcum+=M.exento;
+    const r0=exRet?1:0;
+    const salTax=M.salMes-exSal*r0, plusTax=M.plus-exPlus*r0, extTax=M.extra-exExt*r0, varTax=M.variable-exVar*r0;
+    const sujTax=salTax+plusTax+extTax+varTax;
+    let tipo;
+    if(P.irpf==='zero') tipo=0;
+    else if(P.irpf==='manual') tipo=P.irpfManual;
+    else{
+      /* lo que queda del año, suponiendo que las condiciones de este mes se mantienen */
+      const salCur=M.salMes;
+      const plusCur=M.D.fin?M.sa/365*M.D.finT.pctPlus*diasMesTipico(P):0;
+      const fueraFut=exRet&&M.D.fin;
+      let fut=0, futTax=0;
+      for(let j=M.m+1;j<=12;j++){
+        fut+=salCur+plusCur+(j===2?P.variable:0);
+        futTax+=(fueraFut?0:salCur)+(exRet?0:plusCur)+(j===2?P.variable*(1-raV*r0):0);
+        if(P.pagas===14){
+          const e=P.prorr?salCur/largoPeriodo(P,j):(P.extraMeses.includes(j)?salCur:0);
+          fut+=e; futTax+=fueraFut?0:e;
+        }
+      }
+      const proj=acum+suj+fut, projTax=acumTax+sujTax+futTax;
+      const r=proj>0?retencionAnual(proj,P,null,y)/proj:0;
+      const resto=sujTax+futTax;
+      tipo=resto>0?Math.max(0,(r*projTax-retenido)/resto):0;
+      M.proj=proj;
+    }
+    M.sujTax=sujTax;
+    const baseMes=M.salMes+M.plus+(P.prorr?M.extra:0);
+    const baseExtra=P.prorr?0:M.extra;
+    M.tipo=tipo;
+    M.irpfMes=(salTax+plusTax+(P.prorr?extTax:0))*tipo;
+    M.irpfExtra=(P.prorr?0:extTax)*tipo;
+    M.irpfVar=varTax*tipo;
+    M.irpf=M.irpfMes+M.irpfExtra+M.irpfVar;
+    M.brutoMes=baseMes+M.dieta;
+    M.netoMes=baseMes+M.dieta-M.irpfMes-M.ss;
+    M.netoExtra=baseExtra-M.irpfExtra;
+    M.netoVar=M.variable-M.irpfVar-M.ssVar;
+    M.neto=M.netoMes+M.netoExtra+M.netoVar;
+    retenido+=M.irpf; acum+=suj; acumTax+=sujTax;
+  }
+  return {y,meses,res:RES,exRet,comp:0,tot:totales(meses,P)};
+}
+
+function totales(meses,P){
+  const t={sal:0,extra:0,plus:0,dieta:0,variable:0,irpf:0,ss:0,neto:0,netoMes:0,netoExtra:0,netoVar:0,
+           irpfMes:0,irpfExtra:0,irpfVar:0,ssVar:0,dias:0,suj:0,comp:0,exento:0};
+  for(const M of meses){
+    t.sal+=M.salMes; t.extra+=M.extra; t.plus+=M.plus; t.dieta+=M.dieta; t.variable+=M.variable;
+    t.irpf+=M.irpf; t.ss+=M.ss+M.ssVar; t.ssVar+=M.ssVar; t.neto+=M.neto;
+    t.netoMes+=M.netoMes; t.netoExtra+=M.netoExtra; t.netoVar+=M.netoVar;
+    t.irpfMes+=M.irpfMes; t.irpfExtra+=M.irpfExtra; t.irpfVar+=M.irpfVar; t.dias+=M.D.dias; t.exento+=M.exento||0;
+  }
+  t.suj=t.sal+t.extra+t.plus+t.variable;
+  t.dev=t.suj+t.dieta;
+  t.tipoEf=t.suj>0?t.irpf/t.suj:0;
+  return t;
+}
+
+/* Tope de IDOM: en los años con residencia en España no pagas más IRPF que quedándote.
+   La diferencia se suma como compensación al final del año. */
+function aplicarTope(con,sin,P){
+  const comp=(P.tope&&!(P.regimen==='183'&&con.res.noRes))?Math.max(0,con.tot.irpf-sin.tot.irpf):0;
+  con.comp=comp; con.tot.comp=comp; con.tot.neto+=comp;
+  con.tot.irpfNeto=con.tot.irpf-comp;
+  return con;
+}
+
+/* Nómina anualizada para un bruto fijo todo el año (sin desplazamiento) */
+function motor(b,P,modo,y){
+  modo=modo||P.irpf; y=y||ANIO_BASE;
+  const v=P.variable||0, total=b+v, tss=tipoSS(P,y);
+  const salMes=b/P.pagas;
+  const baseM=clampBase(b/12,P,y);
+  const ss=baseM*tss, ssVar=(clampBase(b/12+v,P,y)-baseM)*tss, ssAnual=ss*12+ssVar;
+  const irpf=retencionAnual(total,P,modo,y);
+  const tipo=total>0?irpf/total:0;
+  const aparte=P.pagas===14&&!P.prorr;
+  const brutoMes=aparte?salMes:b/12;
+  const brutoExtra=aparte?salMes:0;
+  return {b,v,y,total,tU:tipoTabla(total,P,y),irpf,tipo,ss,ssVar,ssAnual,brutoMes,brutoExtra,
+          irpfMes:brutoMes*tipo,irpfExtra:brutoExtra*tipo,irpfVar:v*tipo,
+          netoMes:brutoMes-ss-brutoMes*tipo,netoExtra:brutoExtra-brutoExtra*tipo,
+          netoVar:v-v*tipo-ssVar,
+          neto:total-ssAnual-irpf};
+}
+
+
+</script>
+<script>
+"use strict";
+/* ============================================================
+   PARÁMETROS DEL CÁLCULO
+   ============================================================ */
+/* Parámetros a partir de los campos del formulario (c: {id: valor o marcado}) y del estado (st).
+   Lo usan la calculadora (con lo que hay en pantalla) y el plan (con lo que guardó la calculadora). */
+function paramsDe(c,st){
+  const v=id=>c[id]==null?'':String(c[id]);
+  const n=id=>{const x=parseFloat(c[id]);return isFinite(x)?x:0;};
+  const ck=id=>!!c[id];
+  const imp=Math.max(0,n('importe'));
+  const pagas=+st.pagas===12?12:14;
+  const salario0=st.modoImporte==='paga'?imp*pagas:imp;
+  let a=+v('extra1')||6,b=+v('extra2')||12;
+  if(a===b){a=6;b=12;}
+  const extraMeses=pagas===14?[Math.min(a,b),Math.max(a,b)]:[];
+  const prorr=pagas===14&&st.cobroExtra==='prorr';
+  const po=PAISES.find(p=>p[0]===v('origen'))||PAISES.find(p=>p[0]==='España')||PAISES[0];
+  const pd=PAISES.find(p=>p[0]===v('destino'))||PAISES[0];
+  const nuclear=ck('nuclear');
+  const plusDe=d=>(d[2]<=po[2]?0.15:0.15+(d[2]-po[2]))+(nuclear?0.10:0);
+  const pctPlus=plusDe(pd);
+  const tramo=(d,x,y)=>{ const sa=parseFecha(x), rb=parseFecha(y);
+    return {destino:d[0],dietaDia:d[1],pctPlus:plusDe(d),salida:sa,regreso:rb,
+            a:sa?diaNum(sa.y,sa.m,sa.d):NaN,b:rb?diaNum(rb.y,rb.m,rb.d):NaN}; };
+  /* una estancia; con vuelta intermedia a España, dos tramos al mismo destino */
+  let estancias=[tramo(pd,v('salida'),v('regreso'))];
+  const pausa=ck('est2');
+  if(pausa){
+    const vu=parseFecha(v('vueltaEsp')), id=parseFecha(v('idaDeNuevo'));
+    const iso=x=>x?new Date((diaNum(x.y,x.m,x.d))*864e5).toISOString().slice(0,10):'';
+    const dia=(x,k)=>x?new Date((diaNum(x.y,x.m,x.d)+k)*864e5).toISOString().slice(0,10):'';
+    /* el día que vuelves ya estás en España; el día que te vas de nuevo ya estás fuera */
+    estancias=[tramo(pd,v('salida'),dia(vu,-1)),tramo(pd,iso(id),v('regreso'))];
+    estancias.pausa={vuelta:vu,ida:id};
+  }
+  const ult=estancias[estancias.length-1];
+  const subidas=(st.subidas||[])
+    .map(s=>({pct:+s.pct||0,i:parseYM(s.desde)}))
+    .filter(s=>isFinite(s.i)&&st.mode!=='desglose')
+    .sort((x,y)=>x.i-y.i);
+  const bMax=n('baseMax')||1e9;
+  return {
+    salario0,pagas,extraMeses,prorr,variable:Math.max(0,n('variable')),
+    regimen:v('regimen')||'917',aplicaNomina:ck('aplicaNomina'),costeDestino:ck('costeDestino'),
+    tope:ck('tope'),
+    ipc:n('ipc')/100,indexar:ck('indexar'),meiProg:ck('meiProg'),eurosHoy:ck('eurosHoy'),
+    modoDias:v('modoDias')||'fijo',
+    desc:+v('desc')||0,disc:+v('disc')||0,
+    irpf:st.irpf||'tabla',irpfManual:n('irpfManual')/100,
+    tSS:n('tipoSS')/100,tEmp:n('tipoEmp')/100,bMin:n('baseMin'),bMax,
+    subidas,
+    origen:po[0],destino:pd[0],nuclear,dietaDia:pd[1],pctPlus,
+    estancias,pausa:pausa?estancias.pausa:null,
+    salida:estancias[0].salida,regreso:ult.regreso||estancias[0].regreso,
+    diasDef:Math.max(0,Math.min(31,n('diasDef'))),
+    anio:Math.round(n('anio'))||new Date().getFullYear(),
+  };
+}
+
+</script>
+<script>
+"use strict";
+/* ============================================================
+   MI PLAN: nómina (de la estancia de la calculadora), balance y plan de pagos
+   ============================================================ */
+const $=id=>document.getElementById(id);
+/* motor.js lee los días cambiados a mano de S.overrides */
+const S={overrides:{}};
+const CLAVE_PLAN='idom-plan', CLAVE_CALC='idom-nomina-estancia', CLAVE_CHAT='idom-plan-chat';
+
+const r2=n=>Math.round(n*100)/100;
+const clon=o=>JSON.parse(JSON.stringify(o));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const isoD=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseD=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
+const hoy=()=>isoD(new Date());
+const fdate=s=>{const d=parseD(s);return `${d.getDate()} ${MESES[d.getMonth()]}`;};
+const fdateY=s=>{const d=parseD(s);return `${d.getDate()} ${MESES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;};
+const fx=x=>x?x.d+' '+MESES[x.m-1]+' '+x.y:'—';
+const mesTxt=i=>MESES_L[i%12]+' '+Math.floor(i/12);
+const mesCorto=i=>MESES[i%12]+' '+String(Math.floor(i/12)).slice(2);
+const mayus=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const e0=n=>eur0(r2(n)||0);
+const e2=n=>eur(r2(n)||0);
+
+const BLOQ={
+  fijo:{label:'Fijas',desc:'no se aplazan',color:'var(--fijo)'},
+  aplazable:{label:'Aplazables',desc:'se pagan y se vuelven a pedir',color:'var(--aplazable)'},
+  amigo:{label:'Amigos y familia',desc:'sin plazo ni intereses',color:'var(--amigo)'},
+  aparte:{label:'Cuotas aparte',desc:'no cuentan en la deuda total',color:'var(--aparte)'},
+};
+const CUENTAN=['fijo','aplazable','amigo'];
+
+/* ============================================================
+   ESTADO
+   ============================================================ */
+const planVacio=()=>({version:1,saldo:{fecha:hoy(),importe:0},gastosMes:0,deudas:[],movimientos:[],cobrados:{},horizonte:15});
+const idNuevo=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const esFecha=s=>/^\d{4}-\d{2}-\d{2}$/.test(String(s||''));
+/* Acepta copias de esta página y planes de deudas antiguos (con bloque «santander» y nóminas a mano) */
+function normalizarPlan(p){
+  p=p&&typeof p==='object'?p:{};
+  const out=planVacio();
+  if(p.saldo&&esFecha(p.saldo.fecha)) out.saldo={fecha:p.saldo.fecha,importe:r2(+p.saldo.importe||0)};
+  out.gastosMes=Math.abs(+p.gastosMes||0);
+  out.deudas=(Array.isArray(p.deudas)?p.deudas:[]).filter(d=>d&&d.id!=null).map(d=>({
+    id:String(d.id).slice(0,40),nombre:String(d.nombre||d.id).slice(0,60),
+    bloque:d.bloque==='santander'?'aparte':(BLOQ[d.bloque]?d.bloque:'fijo'),
+    pendiente:r2(Math.max(0,+d.pendiente||0)),notas:String(d.notas||'').slice(0,240),
+    cuota:r2(Math.max(0,+d.cuota||0)),dia:Math.min(28,Math.max(1,Math.round(+d.dia||1)))}));
+  /* las nóminas salen de la estancia: las apuntadas a mano en planes antiguos se quitan para no contarlas dos veces */
+  out.movimientos=(Array.isArray(p.movimientos)?p.movimientos:[])
+    .filter(m=>m&&esFecha(m.f)&&!(m.t==='ingreso'&&/^(Nómina|Paga extra|Variable)/.test(m.c||'')))
+    .map(m=>{ const x={id:String(m.id||idNuevo('m')),f:m.f,c:String(m.c||'').slice(0,120),t:['ingreso','gasto','pago','prestamo','aplazado'].includes(m.t)?m.t:'gasto',
+      d:String(m.d||''),i:r2(+m.i||0),estado:m.estado==='hecho'?'hecho':'previsto'};
+      if(m.debe!=null) x.debe=r2(+m.debe||0); if(m.cierra) x.cierra=true; return x; });
+  out.cobrados=p.cobrados&&typeof p.cobrados==='object'?p.cobrados:{};
+  if([12,15,18,24,36].includes(+p.horizonte)) out.horizonte=+p.horizonte;
+  if(p.estancia&&p.estancia.S&&p.estancia.campos) out.estancia=p.estancia;
+  return out;
+}
+let PL=null;
+try{ const t=localStorage.getItem(CLAVE_PLAN); PL=t?normalizarPlan(JSON.parse(t)):null; }catch(e){ PL=null; }
+if(!PL) PL=planVacio();
+
+/* La estancia: la que guardó la calculadora en este navegador o, si no hay, una copia cargada desde un archivo */
+let EST=null, fuenteEst='';
+function leerCalc(){ try{ const t=localStorage.getItem(CLAVE_CALC); const v=t?JSON.parse(t):null; return v&&v.S&&v.campos?v:null; }catch(e){ return null; } }
+function cargarEstancia(){
+  const v=leerCalc();
+  if(v){ EST=v; fuenteEst='calc'; }
+  else if(PL.estancia){ EST=clon(PL.estancia); fuenteEst='copia'; }
+  else{ EST=null; fuenteEst=''; }
+}
+cargarEstancia();
+function guardar(){
+  try{ localStorage.setItem(CLAVE_PLAN,JSON.stringify(PL)); }catch(e){}
+  if(!EST) return;
+  if(fuenteEst==='calc'){ try{ localStorage.setItem(CLAVE_CALC,JSON.stringify(EST)); }catch(e){} }
+  else PL.estancia=clon(EST);
+}
+const undoStack=[];
+const foto0=()=>({PL:clon(PL),EST:EST?clon(EST):null});
+function pushUndo(){ undoStack.push(foto0()); if(undoStack.length>30) undoStack.shift(); }
+function deshacer(){ const s=undoStack.pop(); if(!s) return; PL=s.PL; EST=s.EST; guardar(); pintar(); }
+const hechoGen=id=>PL.cobrados[id]!=null;
+
+/* ============================================================
+   1 · NÓMINA: la estancia de la calculadora, mes a mes
+   ============================================================ */
+function paramsEstancia(){
+  S.overrides=EST.S.overrides&&typeof EST.S.overrides==='object'?EST.S.overrides:{};
+  /* las subidas cuentan siempre, aunque la calculadora se quedara en «Desglosar nómina» */
+  const P=paramsDe(EST.campos,{...EST.S,mode:'estancia'});
+  P.prorr=false;
+  return P;
+}
+function calcNomina(){
+  if(!EST) return {err:'sin',filas:[],ingresos:[],anios:[]};
+  const P=paramsEstancia();
+  if(!P.salida||!P.regreso) return {err:'Faltan el día de salida o el de vuelta en la pestaña Estancia de la calculadora.',P,filas:[],ingresos:[],anios:[]};
+  const s0=parseFecha(PL.saldo.fecha)||parseFecha(hoy()), i0=s0.i, i1=i0+PL.horizonte-1;
+  const filas=[], ingresos=[], anios=[];
+  for(let y=Math.floor(i0/12);y<=Math.floor(i1/12);y++){
+    const sin=simularAnio(P,y,false);
+    let Py=P, con=simularAnio(P,y,true);
+    const fuera=con.res.fuera;
+    /* más de 183 días fuera en el año natural: el destino grava e IDOM iguala a lo de España */
+    const igualado=fuera>183&&P.regimen!=='ninguno';
+    if(igualado){ Py={...P,regimen:'ninguno'}; con=simularAnio(Py,y,true); }
+    aplicarTope(con,sin,Py);
+    let netoAnio=0;
+    for(const M of con.meses){
+      if(M.i<i0||M.i>i1) continue;
+      const comp=M.m===12?con.comp:0, total=M.neto+comp;
+      netoAnio+=total;
+      filas.push({M,i:M.i,y,m:M.m,sit:textoSituacion(M.D,P),dias:M.D.dias,ov:!!M.D.ov,sal:M.salMes,plus:M.plus,dieta:M.dieta,
+        extra:M.extra,variable:M.variable,irpf:M.irpf,ss:M.ss+M.ssVar,netoMes:M.netoMes,netoExtra:M.netoExtra,netoVar:M.netoVar,comp,total,igualado,
+        subida:!!M.subida});
+      const f=`${y}-${pad(M.m)}-${M.m===2?28:29}`;
+      ingresos.push({id:`n-${y}-${M.m}`,f,c:`Nómina de ${MESES_L[M.m-1]}`,t:'ingreso',d:'',i:r2(M.netoMes),estado:'previsto',gen:'nomina'});
+      if(M.extra>0.5) ingresos.push({id:`x-${y}-${M.m}`,f,c:`Paga extra de ${MESES_L[M.m-1]}`,t:'ingreso',d:'',i:r2(M.netoExtra),estado:'previsto',gen:'nomina'});
+      if(M.variable>0.5) ingresos.push({id:`v-${y}-${M.m}`,f,c:'Variable de febrero',t:'ingreso',d:'',i:r2(M.netoVar),estado:'previsto',gen:'nomina'});
+      if(comp>0.5) ingresos.push({id:`c-${y}`,f,c:'Compensación de IDOM (tope)',t:'ingreso',d:'',i:r2(comp),estado:'previsto',gen:'nomina'});
+    }
+    anios.push({y,fuera,igualado,res:con.res,comp:con.comp,neto:netoAnio,regimen:P.regimen});
+  }
+  return {P,filas,ingresos,anios,i0,i1};
+}
+let NOM={err:'sin',filas:[],ingresos:[],anios:[]};
+
+/* ============================================================
+   PLAN DE PAGOS
+   ============================================================ */
+/* Movimientos que pone el plan: nóminas, gastos de vida de cada mes y cuotas mensuales de las deudas */
+function generados(){
+  const out=NOM.ingresos.map(m=>hechoGen(m.id)?{...m,estado:'hecho',i:PL.cobrados[m.id]}:m);
+  const s0=parseFecha(PL.saldo.fecha)||parseFecha(hoy()), i0=s0.i, i1=i0+PL.horizonte-1;
+  const est=id=>hechoGen(id)?'hecho':'previsto';
+  const conGasto=new Set(PL.movimientos.filter(m=>m.t==='gasto'&&/^Gastos de vida/i.test(m.c)).map(m=>m.f.slice(0,7)));
+  for(let i=i0;i<=i1;i++){
+    const k=ymKey(i), f=k+'-01';
+    if(PL.gastosMes>0&&!conGasto.has(k)&&f>=PL.saldo.fecha){ const id='g-'+k;
+      out.push({id,f,c:'Gastos de vida',t:'gasto',d:'',i:hechoGen(id)?PL.cobrados[id]:-PL.gastosMes,estado:est(id),gen:'auto'}); }
+  }
+  for(const d of PL.deudas){
+    if(!(d.cuota>0)) continue;
+    const propios=PL.movimientos.filter(m=>m.d===d.id);
+    const ultimo=propios.reduce((a,m)=>m.f>a?m.f:a,'');
+    let resto=d.pendiente||0;
+    for(const m of propios) if(m.estado!=='hecho'){ if(m.t==='prestamo') resto+=m.debe||m.i||0; else if(m.i<0) resto+=m.i; if(m.cierra) resto=0; }
+    const desde=ultimo?parseFecha(ultimo).i+1:i0;
+    for(let i=Math.max(desde,i0);i<=i1;i++){
+      const id='s-'+d.id+'-'+ymKey(i), f=ymKey(i)+'-'+pad(d.dia||1);
+      if(hechoGen(id)){ out.push({id,f,c:d.nombre+' · cuota',t:'pago',d:d.id,i:PL.cobrados[id],estado:'hecho',gen:'auto'}); continue; }
+      if(f<PL.saldo.fecha) continue;
+      const q=Math.min(d.cuota,resto); if(q<0.5) break;
+      resto=r2(resto-q);
+      out.push({id,f,c:d.nombre+' · cuota',t:'pago',d:d.id,i:-r2(q),estado:'previsto',gen:'auto'});
+    }
+  }
+  return out;
+}
+const movimientos=()=>PL.movimientos.concat(generados());
+const pendientes=()=>movimientos().filter(m=>m.estado!=='hecho').sort((a,b)=>a.f.localeCompare(b.f)||(b.i>0)-(a.i>0));
+function proyeccion(){
+  const s0=PL.saldo; let b=s0.importe; const pts=[{f:s0.fecha,b,evs:[]}];
+  for(const m of pendientes()){
+    const f=m.f<s0.fecha?s0.fecha:m.f; b=r2(b+(m.i||0));
+    const last=pts[pts.length-1];
+    if(last.f===f){ last.b=b; last.evs.push(m); } else pts.push({f,b,evs:[m]});
+  }
+  return pts;
+}
+const minimo=pts=>pts.reduce((a,p)=>p.b<a.b?p:a,pts[0]);
+function restoPorDeuda(hasta){
+  const rest={}; for(const d of PL.deudas) rest[d.id]=d.pendiente||0;
+  for(const m of pendientes()){
+    if(hasta&&m.f>hasta) break;
+    if(!m.d||!(m.d in rest)) continue;
+    if(m.t==='prestamo') rest[m.d]+=(m.debe||m.i||0); else if(m.i<0) rest[m.d]+=m.i;
+    if(m.cierra) rest[m.d]=0;
+    rest[m.d]=Math.max(0,r2(rest[m.d]));
+  }
+  return rest;
+}
+function deudaPorBloque(hasta){
+  const rest=restoPorDeuda(hasta), out={fijo:0,aplazable:0,amigo:0,aparte:0};
+  for(const d of PL.deudas) out[d.bloque]=r2((out[d.bloque]||0)+rest[d.id]);
+  return out;
+}
+const deudaHoy=()=>r2(PL.deudas.filter(d=>CUENTAN.includes(d.bloque)).reduce((a,d)=>a+(d.pendiente||0),0));
+function finesDeMes(){
+  const ini=parseD(PL.saldo.fecha), movs=pendientes(), last=movs.length?parseD(movs[movs.length-1].f):ini, out=[];
+  let y=ini.getFullYear(), m=ini.getMonth();
+  while(new Date(y,m,1)<=last){ out.push({key:`${y}-${pad(m+1)}`,fin:isoD(new Date(y,m+1,0)),y,m}); m++; if(m===12){m=0;y++;} }
+  return out;
+}
+function resumenMensual(){
+  const pts=proyeccion(), movs=pendientes();
+  return finesDeMes().map(mm=>{
+    const b=deudaPorBloque(mm.fin);
+    const saldo=[...pts].reverse().find(p=>p.f<=mm.fin)?.b??PL.saldo.importe;
+    const enMes=pts.filter(p=>p.f.startsWith(mm.key));
+    const del=movs.filter(m=>m.f.startsWith(mm.key));
+    const entra=del.filter(m=>m.i>0).reduce((a,m)=>a+m.i,0), sale=del.filter(m=>m.i<0).reduce((a,m)=>a+m.i,0);
+    return {mes:`${MESES_L[mm.m]} ${mm.y}`,key:mm.key,m:mm.m,y:mm.y,saldoFin:r2(saldo),saldoMin:r2(enMes.length?Math.min(...enMes.map(p=>p.b)):saldo),
+            entra:r2(entra),sale:r2(sale),deuda:r2(b.fijo+b.aplazable+b.amigo),...b};
+  });
+}
+function libre(){
+  if(deudaHoy()<1) return null;
+  return resumenMensual().find(r=>r.deuda<1)||null;
+}
+const libreTxt=()=>{ if(deudaHoy()<1) return 'sin deudas'; const l=libre(); return l?mayus(MESES_L[l.m])+' '+l.y:'fuera del plan'; };
+
+/* Marca un movimiento como pagado o cobrado. importe: lo que de verdad ha entrado o salido, si no coincide con lo previsto. */
+function marcarHecho(id,importe){
+  const gen=movimientos().find(m=>m.id===id&&m.gen);
+  if(gen){
+    if(hechoGen(id)) throw new Error('Ya estaba hecho: '+gen.c);
+    const v=importe!=null?importe:gen.i; PL.cobrados[id]=v; PL.saldo.importe=r2(PL.saldo.importe+v);
+    const d=PL.deudas.find(x=>x.id===gen.d); if(d&&v<0) d.pendiente=Math.max(0,r2((d.pendiente||0)+v));
+    return {concepto:gen.c,importe:v,previsto:gen.i};
+  }
+  const m=PL.movimientos.find(x=>x.id===id); if(!m||m.estado==='hecho') throw new Error('No hay ningún movimiento pendiente con id '+id);
+  const previsto=m.i;
+  if(importe!=null) m.i=importe;
+  m.estado='hecho'; PL.saldo.importe=r2(PL.saldo.importe+(m.i||0));
+  const d=PL.deudas.find(x=>x.id===m.d);
+  if(d){ if(m.t==='prestamo') d.pendiente=r2((d.pendiente||0)+(m.debe||m.i||0)); else if(m.i<0) d.pendiente=Math.max(0,r2((d.pendiente||0)+m.i)); if(m.cierra) d.pendiente=0; }
+  return {concepto:m.c,importe:m.i,previsto};
+}
+function quitarPrevisto(id){ const s=PL.saldo.importe, r=marcarHecho(id); PL.saldo.importe=s; return r; }
+function editarGastos(v){ PL.gastosMes=v; for(const m of PL.movimientos) if(m.estado!=='hecho'&&m.t==='gasto'&&/^Gastos de vida$/i.test(m.c)) m.i=-v; }
+
+/* ============================================================
+   PINTADO
+   ============================================================ */
+const kpi=(l,v,s,cls)=>`<div class="kpi${cls?' '+cls:''}"><div class="v">${v}</div><div class="l">${l}</div>${s?`<div class="s">${s}</div>`:''}</div>`;
+function kpisDinero(){
+  const pts=proyeccion(), mn=minimo(pts);
+  const ap=PL.deudas.filter(d=>d.bloque==='aparte').reduce((a,d)=>a+(d.pendiente||0),0);
+  const estMin=mn.b<0?`<span class="estado mal">te faltan ${e0(-mn.b)} el ${fdate(mn.f)}</span>`:mn.b<150?`<span class="estado aviso">muy justo el ${fdate(mn.f)}</span>`:'<span class="estado ok">llegas a todo</span>';
+  return kpi('Saldo en cuenta',e2(PL.saldo.importe),'a '+fdateY(PL.saldo.fecha),'main')+
+    kpi('Deuda pendiente',e2(deudaHoy()),ap>0?'cuotas aparte: '+e0(ap):'sin cuotas aparte')+
+    kpi('Saldo más bajo previsto',e0(mn.b),estMin)+
+    kpi('Libre de deudas',libreTxt(),PL.deudas.length?'sin contar las cuotas aparte':'apunta tus deudas en Balance','pos');
+}
+
+function pintar(){
+  NOM=calcNomina();
+  pintarNomina(); pintarBalance(); pintarPagos();
+  $('btnDeshacer').hidden=!undoStack.length;
+}
+
+function pintarNomina(){
+  const N=NOM;
+  if(N.err){
+    $('nAviso').innerHTML=N.err==='sin'
+      ?`<div class="aviso">Todavía no hay ninguna estancia guardada en este navegador. Ábrela en la <a href="calculadora-idom.html">calculadora</a> (pestaña <b>Calcular estancia</b>) y vuelve aquí, o carga el JSON que guardaste desde la calculadora con «Cargar copia».</div>`
+      :`<div class="aviso">${esc(N.err)}</div>`;
+    ['nHero','nKpis','nAnios','nTabla','nCfg'].forEach(id=>$(id).innerHTML='');
+    $('nFuente').textContent=''; $('nHero').hidden=true;
+    return;
+  }
+  $('nAviso').innerHTML=''; $('nHero').hidden=false;
+  const P=N.P, E=EST;
+  $('nFuente').textContent=fuenteEst==='calc'?'Leída de la calculadora de este navegador: si cambias algo allí, aquí se actualiza.':'Copia cargada desde un archivo.';
+  const subs=P.subidas.length?P.subidas.map(s=>signo(s.pct,milar)+' % desde '+mesLabel(s.i)).join(', '):'ninguna';
+  const reg={'917':'Exención art. 9.17','183':'Regla de 183 días','ninguno':'Tributa todo en España'}[P.regimen]||P.regimen;
+  const fichas=[['Destino',P.origen+' → '+P.destino],['Salida',fx(P.salida)]];
+  if(P.pausa) fichas.push(['Vuelves a España',fx(P.pausa.vuelta)],['Regresas a la estancia',fx(P.pausa.ida)]);
+  fichas.push(['Vuelta definitiva',fx(P.regreso)],['Salario base',e0(P.salario0)+' al año'],['Subidas',subs],
+    ['Variable',P.variable?e0(P.variable)+' en febrero':'—'],['Plus y dieta',nfx.format(P.pctPlus*100)+' % · '+e0(P.dietaDia)+'/día'],
+    ['Días en destino',{fijo:P.diasDef+' al mes',laborables:'laborables',naturales:'naturales'}[P.modoDias]],
+    ['Impuestos',reg+(P.tope?' · tope IDOM':'')]);
+  $('nCfg').innerHTML=fichas.map(([a,b])=>`<div><span>${a}</span><b>${esc(b)}</b></div>`).join('');
+  const F=N.filas, tot=F.reduce((a,f)=>a+f.total,0), fuera=F.filter(f=>f.dias>0), esp=F.filter(f=>!f.dias);
+  const media=a=>a.length?a.reduce((x,f)=>x+f.netoMes,0)/a.length:0;
+  const ev=F.reduce((a,f)=>a+f.netoExtra+f.netoVar+f.comp,0), pd=F.reduce((a,f)=>a+f.plus+f.dieta,0);
+  $('nHero').innerHTML=`<div class="row">
+    <div><div class="figure">${e0(tot)}</div><div class="fig-lab">cobras en ${F.length} meses, de ${mesTxt(N.i0)} a ${mesTxt(N.i1)}</div></div>
+    <div><div class="sub">${e0(F.length?tot/F.length:0)}</div><div class="sub-lab">de media al mes, con extras y variable</div></div>
+    <div><div class="sub">${e0(pd)}</div><div class="sub-lab">plus y dietas (las dietas no tributan)</div></div></div>`;
+  $('nKpis').innerHTML=kpi('Nómina en destino',e0(media(fuera)),fuera.length+' meses con días fuera','pos')+
+    kpi('Nómina en España',e0(media(esp)),esp.length+' meses sin días fuera')+
+    kpi('Extras, variable y compensación',e0(ev),'partidas aparte')+
+    kpi('IRPF y Seguridad Social',e0(F.reduce((a,f)=>a+f.irpf+f.ss,0)),'en el periodo');
+  $('nAnios').innerHTML=N.anios.map(a=>{
+    let est;
+    if(a.fuera===0) est='<span class="estado neutro">todo el año en España</span>';
+    else if(a.igualado) est='<span class="estado aviso">más de 183 días fuera: tributa como en España (IDOM iguala)</span>';
+    else if(a.regimen==='ninguno') est='<span class="estado neutro">tributa todo en España</span>';
+    else if(a.res.libre) est=`<span class="estado ok">lo de fuera no tributa en España · te quedan ${183-a.fuera} días de margen</span>`;
+    else est='<span class="estado neutro">tributa en España</span>';
+    return `<div class="anio"><b class="y">${a.y}</b><span>${a.fuera} días fuera</span>${est}${a.comp>0.5?`<span>IDOM compensa ${e0(a.comp)}</span>`:''}<span class="tag">en el plan: ${e0(a.neto)}</span></div>`;
+  }).join('');
+  let h='<thead><tr><th>Mes</th><th>Situación</th><th class="n">Días fuera</th><th class="n">Salario</th><th class="n">Plus</th><th class="n">Dietas</th><th class="n">IRPF</th><th class="n">SS</th><th class="n">Nómina neta</th><th class="n">Extra · variable</th><th class="n">Cobras</th></tr></thead><tbody>';
+  const T={sal:0,plus:0,dieta:0,irpf:0,ss:0,neto:0,ev:0,tot:0};
+  let yAnt=null;
+  for(const f of F){
+    if(f.y!==yAnt){ h+=`<tr class="yrow"><td colspan="11">${f.y}${N.anios.find(a=>a.y===f.y)?.igualado?' <span class="pill alerta">más de 183 días: tributa como en España</span>':''}</td></tr>`; yAnt=f.y; }
+    const evv=f.netoExtra+f.netoVar+f.comp, idN=`n-${f.y}-${f.m}`;
+    T.sal+=f.sal+f.extra+f.variable; T.plus+=f.plus; T.dieta+=f.dieta; T.irpf+=f.irpf; T.ss+=f.ss; T.neto+=f.netoMes; T.ev+=evv; T.tot+=f.total;
+    const etiq=[f.extra>0.5?'extra':'',f.variable>0.5?'variable':'',f.comp>0.5?'compensación':''].filter(Boolean).join(' + ');
+    h+=`<tr class="${f.dias>0?'':'fuera'}${evv>0.5?' extra':''}"><td>${MESES[f.m-1]}${f.subida?' <span class="pill up">subida</span>':''}</td><td>${esc(f.sit)}</td>
+      <td class="n">${f.dias?nfx.format(f.dias):'—'}${f.ov?' <span class="pill alerta">a mano</span>':''}</td>
+      <td class="n">${e2(f.sal)}</td><td class="n">${f.plus?e2(f.plus):'—'}</td><td class="n">${f.dieta?e2(f.dieta):'—'}</td>
+      <td class="n">${e2(f.irpf)}</td><td class="n">${e2(f.ss)}</td>
+      <td class="n b">${e2(f.netoMes)}${hechoGen(idN)?`<br><span class="tag">cobrada: ${e2(PL.cobrados[idN])}</span>`:''}</td>
+      <td class="n">${evv>0.5?e2(evv)+'<br><span class="tag">'+etiq+'</span>':'—'}</td><td class="n b">${e2(f.total)}</td></tr>`;
+  }
+  h+=`</tbody><tfoot><tr><td colspan="3">Total</td><td class="n">${e0(T.sal)}</td><td class="n">${e0(T.plus)}</td><td class="n">${e0(T.dieta)}</td><td class="n">${e0(T.irpf)}</td><td class="n">${e0(T.ss)}</td><td class="n">${e0(T.neto)}</td><td class="n">${e0(T.ev)}</td><td class="n">${e0(T.tot)}</td></tr></tfoot>`;
+  $('nTabla').innerHTML=h;
+  $('horizonte').value=String(PL.horizonte);
+}
+
+function pintarBalance(){
+  $('bKpis').innerHTML=kpisDinero();
+  $('sFecha').value=PL.saldo.fecha; $('sImporte').value=PL.saldo.importe; $('sGastos').value=PL.gastosMes||'';
+  const html=Object.keys(BLOQ).map(b=>{
+    const ds=PL.deudas.filter(d=>d.bloque===b); if(!ds.length) return '';
+    return `<div class="grupo"><div class="grupo-hd"><span><i style="background:${BLOQ[b].color}"></i>${BLOQ[b].label} · ${BLOQ[b].desc}</span><span>${e2(ds.reduce((a,d)=>a+(d.pendiente||0),0))}</span></div>`+
+      ds.map(d=>`<div class="deuda"><span>${esc(d.nombre)}</span><span class="n">${d.pendiente>0.005?e2(d.pendiente):'<span class="estado ok">saldada</span>'}</span>
+        <span class="acc"><button class="btn mini" type="button" data-editar="${esc(d.id)}">Editar</button><button class="btn quitar" type="button" data-borrar-deuda="${esc(d.id)}" aria-label="Borrar ${esc(d.nombre)}">✕</button></span>
+        ${d.cuota||d.notas?`<small>${d.cuota?`cuota ${e2(d.cuota)} el día ${d.dia} de cada mes`:''}${d.cuota&&d.notas?' · ':''}${esc(d.notas)}</small>`:''}</div>`).join('')+'</div>';
+  }).join('');
+  $('bDeudas').innerHTML=html||'<div class="vacio-grande">Aún no hay deudas. Añádelas con el formulario o escribe, por ejemplo, «debo 200 € a Jon».</div>';
+  const sel=$('mDeuda'), v=sel.value;
+  sel.innerHTML='<option value="">Ninguna</option>'+PL.deudas.map(d=>`<option value="${esc(d.id)}">${esc(d.nombre)}</option>`).join('');
+  sel.value=PL.deudas.some(d=>d.id===v)?v:'';
+  const mios=PL.movimientos.filter(m=>m.estado!=='hecho').sort((a,b)=>a.f.localeCompare(b.f));
+  $('bMovs').innerHTML=mios.length?mios.slice(0,80).map(m=>{ const d=PL.deudas.find(x=>x.id===m.d);
+    return `<div class="fila"><span class="f">${fdateY(m.f)}</span><span>${esc(m.c)}${d?`<small>${esc(d.nombre)}${m.cierra?' · la salda':''}</small>`:''}</span>
+      <span class="a"><span class="${m.i>0?'entra':''}">${m.i?(m.i>0?'+':'')+e2(m.i):'neto 0'}</span><button class="btn quitar" type="button" data-borrar-mov="${esc(m.id)}" aria-label="Borrar ${esc(m.c)}">✕</button></span></div>`; }).join('')
+    +(mios.length>80?`<div class="tag">y ${mios.length-80} más</div>`:'')
+    :'<div class="vacio-grande">Sin movimientos apuntados. Las nóminas, los gastos de vida y las cuotas mensuales los pone el plan solo.</div>';
+}
+
+let rango='6';
+function pintarPagos(){
+  $('pKpis').innerHTML=kpisDinero();
+  const pts=proyeccion();
+  const s=parseD(PL.saldo.fecha), lim=isoD(new Date(s.getFullYear(),s.getMonth()+6,0));
+  const ptsV=rango==='6'?pts.filter(p=>p.f<=lim):pts;
+  dibujarSaldo(ptsV,minimo(ptsV),rango==='6'?lim:null);
+  dibujarDeuda();
+  pintarProx();
+}
+
+function ticks(lo,hi,n){
+  const span=hi-lo||1, raw=span/n, mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  const step=[1,2,2.5,5,10].map(k=>k*mag).find(s=>span/s<=n)||10*mag;
+  const t=[]; for(let v=Math.floor(lo/step)*step;v<=hi+1e-6;v+=step) t.push(Math.round(v)); return t;
+}
+const kfmt=v=>Math.abs(v)>=1000?(v/1000).toLocaleString('es-ES',{maximumFractionDigits:1})+'k':String(v);
+function dibujarSaldo(pts,mn,hasta){
+  const W=900,H=280,L=50,R=14,T=14,B=28;
+  const x0=parseD(pts[0].f).getTime(), x1=Math.max(hasta?parseD(hasta).getTime():parseD(pts[pts.length-1].f).getTime(),x0+864e5);
+  const ys=pts.map(p=>p.b), lo=Math.min(0,...ys), hi=Math.max(...ys,100), tk=ticks(lo,hi,5);
+  const yLo=Math.min(lo,tk[0]), yHi=Math.max(hi,tk[tk.length-1]);
+  const X=t=>L+(t-x0)/(x1-x0)*(W-L-R), Y=v=>T+(yHi-v)/(yHi-yLo)*(H-T-B);
+  let d=''; pts.forEach((p,k)=>{ const x=X(parseD(p.f).getTime()), y=Y(p.b); d+=k?`H${x}V${y}`:`M${x},${y}`; }); d+=`H${X(x1)}`;
+  const xt=[]; let mm=new Date(parseD(pts[0].f).getFullYear(),parseD(pts[0].f).getMonth()+1,1);
+  while(mm.getTime()<=x1){ xt.push(mm); mm=new Date(mm.getFullYear(),mm.getMonth()+1,1); }
+  const every=xt.length>9?2:1, tx='fill="var(--muted)" font-size="11" font-family="Instrument Sans,system-ui,sans-serif"';
+  $('pSaldo').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Saldo previsto: mínimo ${e0(mn.b)} el ${fdate(mn.f)}">
+    ${tk.map(v=>`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line-soft)"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end" ${tx}>${kfmt(v)}</text>`).join('')}
+    ${xt.filter((_,k)=>k%every===0).map(t=>`<text x="${X(t.getTime())}" y="${H-8}" text-anchor="middle" ${tx}>${MESES[t.getMonth()]}${t.getMonth()===0?' '+String(t.getFullYear()).slice(2):''}</text>`).join('')}
+    <path d="${d}V${Y(Math.max(yLo,0))}H${L}Z" fill="var(--teal)" fill-opacity=".08"/>
+    <line x1="${L}" x2="${W-R}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--ink)" stroke-width="1"/>
+    <path d="${d}" fill="none" stroke="var(--teal)" stroke-width="2"/>
+    ${pts.filter(p=>p.b<0).map(p=>`<circle cx="${X(parseD(p.f).getTime())}" cy="${Y(p.b)}" r="4" fill="var(--red)"/>`).join('')}
+    <circle cx="${X(parseD(mn.f).getTime())}" cy="${Y(mn.b)}" r="5" fill="${mn.b<0?'var(--red)':'var(--teal)'}"/>
+    <text x="${Math.min(X(parseD(mn.f).getTime())+8,W-150)}" y="${Y(mn.b)>H-B-30?Y(mn.b)-10:Y(mn.b)+18}" fill="var(--ink)" font-size="12" font-family="Instrument Sans,system-ui,sans-serif">mín. ${e0(mn.b)} · ${fdate(mn.f)}</text>
+  </svg>`;
+}
+function dibujarDeuda(){
+  const rows=resumenMensual();
+  $('pLeyenda').innerHTML=CUENTAN.map(b=>`<span><i style="background:${BLOQ[b].color}"></i>${BLOQ[b].label}</span>`).join('');
+  if(!rows.length){ $('pDeuda').innerHTML='<div class="vacio-grande">Sin movimientos previstos.</div>'; $('pTabla').innerHTML=''; return; }
+  const W=600,H=240,L=46,R=8,T=10,B=28, hi=Math.max(...rows.map(r=>r.deuda),100), tk=ticks(0,hi,4), yHi=Math.max(hi,tk[tk.length-1]);
+  const n=rows.length, bw=(W-L-R)/n, w=Math.max(5,Math.min(30,bw*.62)), Y=v=>T+(yHi-v)/yHi*(H-T-B);
+  const tx='fill="var(--muted)" font-size="11" font-family="Instrument Sans,system-ui,sans-serif"';
+  let bars='';
+  rows.forEach((r,k)=>{ const cx=L+bw*k+bw/2; let acc=0;
+    for(const b of CUENTAN){ if(r[b]<=.5) continue; const y0=Y(acc), y1=Y(acc+r[b]); acc+=r[b];
+      bars+=`<rect x="${cx-w/2}" y="${y1}" width="${w}" height="${Math.max(0,y0-y1)}" fill="${BLOQ[b].color}"><title>${r.mes} · ${BLOQ[b].label}: ${e0(r[b])}</title></rect>`; }
+    if(acc<.5&&PL.deudas.length) bars+=`<text x="${cx}" y="${Y(0)-6}" text-anchor="middle" fill="var(--ok)" font-size="12">✓</text>`;
+  });
+  const every=n>14?2:1;
+  $('pDeuda').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Deuda pendiente a fin de cada mes">
+    ${tk.map(v=>`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line-soft)"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end" ${tx}>${kfmt(v)}</text>`).join('')}
+    ${rows.map((r,k)=>k%every?'':`<text x="${L+bw*k+bw/2}" y="${H-8}" text-anchor="middle" ${tx}>${MESES[r.m]}</text>`).join('')}${bars}</svg>`;
+  $('pTabla').innerHTML='<thead><tr><th>Mes</th><th class="n">Entra</th><th class="n">Sale</th><th class="n">Saldo mín.</th><th class="n">Saldo a fin de mes</th><th class="n">Deuda</th><th class="n">Cuotas aparte</th></tr></thead><tbody>'+
+    rows.map(r=>`<tr><td>${r.mes}</td><td class="n pos">${e0(r.entra)}</td><td class="n">${e0(r.sale)}</td>
+      <td class="n${r.saldoMin<0?' warn':''}">${e0(r.saldoMin)}</td><td class="n">${e0(r.saldoFin)}</td>
+      <td class="n b">${e0(r.deuda)}</td><td class="n tag">${e0(r.aparte)}</td></tr>`).join('')+'</tbody>';
+}
+function pintarProx(){
+  const ini=PL.saldo.fecha, lim=isoD(new Date(parseD(ini>hoy()?ini:hoy()).getTime()+45*864e5));
+  const movs=pendientes().filter(m=>m.f<=lim);
+  $('pProx').innerHTML=movs.length?movs.map(m=>{
+    const d=PL.deudas.find(x=>x.id===m.d), atras=m.f<hoy();
+    const sub=d?esc(d.nombre):m.gen==='nomina'?'de la pestaña Nómina':m.gen?'lo pone el plan':'';
+    return `<div class="fila"><span class="f">${fdate(m.f)}</span><span>${esc(m.c)}${sub||atras?`<small>${sub}${sub&&atras?' · ':''}${atras?'<span style="color:var(--aviso)">pendiente de confirmar</span>':''}</small>`:''}</span>
+      <span class="a"><span class="${m.i>0?'entra':''}">${m.i?(m.i>0?'+':'')+e2(m.i):'neto 0'}</span><button class="btn hecho" type="button" data-hecho="${esc(m.id)}">Hecho</button></span></div>`;
+  }).join(''):'<div class="vacio-grande">No hay nada previsto en los próximos 45 días.</div>';
+}
+
+/* ============================================================
+   CÓMO TE AFECTA: foto de lo importante antes y después de un cambio
+   ============================================================ */
+function foto(st){
+  const p0=PL,e0_=EST,n0=NOM; PL=st.PL; EST=st.EST;
+  try{
+    NOM=calcNomina();
+    const pts=proyeccion(), mn=minimo(pts), meses={};
+    for(const f of NOM.filas) meses[f.i]={total:r2(f.total),pd:r2(f.plus+f.dieta),imp:r2(f.irpf),sal:r2(f.sal+f.extra)};
+    return {saldo:PL.saldo.importe,min:{f:mn.f,b:mn.b},libre:libreTxt(),deuda:deudaHoy(),anios:NOM.anios.map(a=>({y:a.y,fuera:a.fuera,igualado:a.igualado})),
+            meses,total:r2(NOM.filas.reduce((a,f)=>a+f.total,0))};
+  }finally{ PL=p0; EST=e0_; NOM=n0; }
+}
+const dif=(a,b)=>{ const d=r2(b-a); return (d>0?'+':'−')+e0(Math.abs(d)); };
+function impacto(A,B){
+  const a=foto(A), b=foto(B), L=[], z={total:0,pd:0,imp:0,sal:0};
+  const cm=Object.keys({...a.meses,...b.meses}).map(Number).filter(k=>Math.abs((a.meses[k]||z).total-(b.meses[k]||z).total)>=1).sort((x,y)=>x-y);
+  if(cm.length){
+    L.push(`Cobras en el periodo ${e0(a.total)} → ${e0(b.total)} (${dif(a.total,b.total)})`);
+    for(const k of cm.slice(0,4)){ const x=a.meses[k]||z, y=b.meses[k]||z, por=[];
+      if(Math.abs(y.sal-x.sal)>=1) por.push(`salario ${dif(x.sal,y.sal)}`);
+      if(Math.abs(y.pd-x.pd)>=1) por.push(`plus y dietas ${dif(x.pd,y.pd)}`);
+      if(Math.abs(y.imp-x.imp)>=1) por.push(`IRPF ${dif(x.imp,y.imp)}`);
+      L.push(`· ${mesCorto(k)}: ${e0(x.total)} → ${e0(y.total)}${por.length?' ('+por.join(', ')+')':''}`); }
+    if(cm.length>4) L.push(`· y ${cm.length-4} meses más`);
+  }
+  for(const y of b.anios){ const x=a.anios.find(q=>q.y===y.y)||{fuera:0,igualado:false};
+    if(x.fuera!==y.fuera) L.push(`Días fuera en ${y.y}: ${x.fuera} → ${y.fuera}`+(y.igualado&&!x.igualado?' · pasas de 183: ese año tributa como en España'
+      :!y.igualado&&x.igualado?' · bajas de 183: recuperas la exención':y.igualado?'':` · margen hasta 183: ${183-y.fuera} días`)); }
+  if(a.saldo!==b.saldo) L.push(`Saldo en cuenta ${e2(a.saldo)} → ${e2(b.saldo)}`);
+  if(a.deuda!==b.deuda) L.push(`Deuda pendiente ${e2(a.deuda)} → ${e2(b.deuda)}`);
+  if(a.min.b!==b.min.b||a.min.f!==b.min.f) L.push(`Saldo más bajo previsto ${e0(a.min.b)} el ${fdate(a.min.f)} → ${e0(b.min.b)} el ${fdate(b.min.f)}`+(b.min.b<0?' · te faltaría dinero':b.min.b<150?' · muy justo':''));
+  if(a.libre!==b.libre) L.push(`Libre de deudas: ${a.libre} → ${b.libre}`);
+  return L;
+}
+
+/* ============================================================
+   CUÉNTAME: entiende frases sencillas y explica lo que hace
+   ============================================================ */
+const sinTilde=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+const numES=s=>{ s=String(s).trim(); if(/,\d{1,2}$/.test(s)) s=s.replace(/\./g,'').replace(',','.'); else s=s.replace(/[.,](?=\d{3}\b)/g,'').replace(',','.'); return parseFloat(s); };
+const MES_ALT='enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre';
+const MES_RE='('+MES_ALT+'|este mes|el mes que viene|proximo mes)';
+/* Mes absoluto (año*12+mes-1) de un nombre de mes: el próximo que viene si no se dice el año */
+function mesDe(txt,anio){
+  const h=parseD(hoy()); let m;
+  if(txt==='este mes') m=h.getMonth(); else if(txt==='el mes que viene'||txt==='proximo mes') m=(h.getMonth()+1)%12;
+  else m=MESES_L.indexOf(txt==='setiembre'?'septiembre':txt);
+  const y=anio?+anio:h.getFullYear()+(m<h.getMonth()-1?1:0)+(txt==='el mes que viene'||txt==='proximo mes'?(h.getMonth()===11?1:0):0);
+  return y*12+m;
+}
+const isoDeMes=(i,d)=>`${Math.floor(i/12)}-${pad(i%12+1)}-${pad(d)}`;
+function buscarDeuda(texto){
+  const t=sinTilde(texto);
+  return PL.deudas.find(d=>t.includes(sinTilde(d.nombre)))||PL.deudas.find(d=>sinTilde(d.nombre).split(/\s+/).some(w=>w.length>=4&&t.includes(w)))||null;
+}
+
+function entender(texto){
+  const t=sinTilde(texto), hechos=[];
+  const add=(que,porque)=>hechos.push({que,porque});
+  let m;
+  /* saldo: se apunta al final, y si lo hay, lo pagado ya está dentro y no se vuelve a restar */
+  let saldoNuevo=null;
+  if((m=t.match(/\bsaldo\D{0,25}?(-?\d[\d.,]*)/))||(m=t.match(/\b(?:tengo|me quedan|quedan|hay)\s+(-?\d[\d.,]*)\s*(?:€|eur|euros)?\s+en\s+(?:la\s+)?(?:cuenta|banco)/))) saldoNuevo=r2(numES(m[1]));
+  const imp=saldoNuevo==null?(t.match(/(-?\d[\d.,]*)\s*(?:€|eur\b|euros)/)||[])[1]:null;
+
+  /* estancia: fechas */
+  if(EST&&(m=t.match(new RegExp('(?:vuelvo|vuelta|regreso|volvere|vuelvo definitivamente)\\D{0,30}?(?:el\\s+)?(\\d{1,2})\\s+de\\s+('+MES_ALT+')(?:\\s+(?:de\\s+)?(20\\d\\d))?')))&&!/intermedi|vacaciones|unos dias/.test(t)){
+    const i=mesDe(m[2],m[3]), f=isoDeMes(i,Math.min(+m[1],diasMes(Math.floor(i/12),i%12+1)));
+    const ant=EST.campos.regreso; EST.campos.regreso=f;
+    add(`vuelta definitiva: ${fdateY(f)}${ant?` (antes ${fdateY(ant)})`:''}`,'cambia los meses con plus y dietas, y los días fuera de cada año, que deciden si llegas a 183');
+  }
+  if(EST&&(m=t.match(new RegExp('(?:me voy|salgo|salida|me marcho)\\D{0,30}?(?:el\\s+)?(\\d{1,2})\\s+de\\s+('+MES_ALT+')(?:\\s+(?:de\\s+)?(20\\d\\d))?')))){
+    const i=mesDe(m[2],m[3]), f=isoDeMes(i,Math.min(+m[1],diasMes(Math.floor(i/12),i%12+1)));
+    const ant=EST.campos.salida; EST.campos.salida=f;
+    add(`salida: ${fdateY(f)}${ant?` (antes ${fdateY(ant)})`:''}`,'la nómina con plus y dietas empieza ese mes');
+  }
+  /* días de un mes */
+  let md=null;
+  if((m=t.match(new RegExp('(\\d{1,2})\\s*dias?\\b.{0,40}?\\b'+MES_RE+'(?:\\s+(?:de\\s+)?(20\\d\\d))?'))))md={dias:+m[1],mes:m[2],anio:m[3]};
+  else if((m=t.match(new RegExp(MES_RE+'(?:\\s+(?:de\\s+)?(20\\d\\d))?\\D{0,40}?(\\d{1,2})\\s*dias?'))))md={dias:+m[3],mes:m[1],anio:m[2]};
+  else if(/\ben espana\b/.test(t)&&!/vuelvo|vuelta|regreso/.test(t)&&(m=t.match(new RegExp(MES_RE+'(?:\\s+(?:de\\s+)?(20\\d\\d))?'))))md={dias:0,mes:m[1],anio:m[2],esp:true};
+  if(md&&EST&&NOM.P){
+    const i=mesDe(md.mes,md.anio), y=Math.floor(i/12), mo=i%12+1;
+    const D=situacion(NOM.P,y,mo,true);
+    if(!D.partes.length) throw new Error(`En ${mesTxt(i)} no estás en la estancia (va del ${fx(NOM.P.salida)} al ${fx(NOM.P.regreso)}). Si cambian las fechas, dime por ejemplo «vuelvo el 15 de junio».`);
+    const dias=md.dias;
+    EST.S.overrides=EST.S.overrides||{}; EST.S.overrides[ymKey(i)]=Math.min(31,Math.max(0,dias));
+    add(`${mesTxt(i)}: ${dias} días en destino`,dias===0
+      ?'sin plus ni dietas ese mes; para el impuesto sigue contando como estancia mientras las fechas lo incluyan (si vuelves de verdad, cambia la fecha de vuelta)'
+      :'plus y dietas se pagan por día en destino, así que la nómina de ese mes cambia');
+  }
+  /* subidas */
+  if(EST&&(m=t.match(new RegExp('(?:subid[oa]s?|suben|subir|aumento|subida)\\D{0,25}?(\\d+(?:[.,]\\d+)?)\\s*(?:%|por ?ciento)(?:.*?\\b'+MES_RE+'(?:\\s+(?:de\\s+)?(20\\d\\d))?)?')))){
+    const i=mesDe(m[2]||'este mes',m[3]), desde=ymKey(i), pct=numES(m[1]);
+    const habia=(EST.S.subidas||[]).find(s=>s.desde===desde);
+    EST.S.subidas=(EST.S.subidas||[]).filter(s=>s.desde!==desde).concat({pct,desde});
+    add(`subida del ${nfx.format(pct)} % desde ${mesTxt(i)}`,habia
+      ?`sustituye la subida del ${nfx.format(+habia.pct||0)} % que tenías ese mes; si son dos subidas distintas, dímelo con otro mes`
+      :'se encadena con las anteriores y sube también las extras que se devengan desde entonces');
+  }
+  if(EST&&(m=t.match(/(?:sueldo|salario)(?: base)?\D{0,20}?(\d[\d.,]{3,})/))){
+    const v=numES(m[1]); EST.campos.importe=String(EST.S.modoImporte==='paga'?r2(v/(+EST.S.pagas||14)):v);
+    add(`salario base ${e0(v)} al año`,'cambian todas las nóminas y la retención');
+  }
+  if((m=t.match(/\bgastos?\b[^\d]{0,30}(\d[\d.,]*)/))&&!/saldo/.test(t)){
+    const v=numES(m[1]); editarGastos(v); add(`gastos de vida ${e0(v)} al mes`,'se restan el día 1 de cada mes');
+  }
+  /* deudas nuevas: «debo 200 € a Jon» */
+  if((m=texto.match(/\bdebo\s+(\d[\d.,]*)\s*(?:€|euros?)?\s+(?:a|al)\s+([A-Za-zÁÉÍÓÚÑÜáéíóúñü][\wÁÉÍÓÚÑÜáéíóúñü]*(?:\s+[A-ZÁÉÍÓÚÑ][\wáéíóúñ]*)?)/i))){
+    const v=r2(numES(m[1])), nombre=m[2].trim();
+    let d=PL.deudas.find(x=>sinTilde(x.nombre)===sinTilde(nombre));
+    if(d){ d.pendiente=v; add(`${d.nombre}: le debes ${e2(v)}`,'actualizo lo que queda'); }
+    else{ d={id:idNuevo('d'),nombre:mayus(nombre),bloque:'amigo',pendiente:v,notas:'',cuota:0,dia:1}; PL.deudas.push(d);
+      add(`nueva deuda: ${d.nombre}, ${e2(v)} (amigos y familia)`,'cuenta en la deuda total; si tiene fecha de pago, dime «pagaré 200 € a '+d.nombre+' el 5 de diciembre»'); }
+  }
+  /* pagos futuros: «pagaré 200 € a Jon el 5 de diciembre» */
+  if((m=t.match(new RegExp('(?:pagare|tengo que pagar|voy a pagar|devolvere)\\s+(\\d[\\d.,]*)\\s*(?:€|euros?)?\\s+(?:a|al|de|del)\\s+(.+?)\\s+el\\s+(\\d{1,2})\\s+de\\s+('+MES_ALT+')(?:\\s+(?:de\\s+)?(20\\d\\d))?')))){
+    const v=r2(numES(m[1])), d=buscarDeuda(m[2]), i=mesDe(m[4],m[5]), f=isoDeMes(i,Math.min(+m[3],diasMes(Math.floor(i/12),i%12+1)));
+    PL.movimientos.push({id:idNuevo('m'),f,c:d?'Pago '+d.nombre:'Pago '+mayus(m[2]),t:'pago',d:d?d.id:'',i:-v,estado:'previsto'});
+    add(`pago previsto de ${e2(v)}${d?' a '+d.nombre:''} el ${fdateY(f)}`,d?'baja esa deuda ese día':'no lo he asociado a ninguna deuda; si es de una, créala antes');
+  }
+  /* pagado o cobrado */
+  if(/(pagad|pague|devuelt|devolvi|cobrad|cobre|llegad|ingresad|recibid|\bhecho\b)/.test(t)){
+    const cobro=/(cobr|llegad|ingresad|recibid|nomina|extra|variable)/.test(t);
+    const lim=isoD(new Date(parseD(hoy()).getTime()+20*864e5));
+    const pal=t.replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>=4&&!/^(pagad|pague|cobr|llegad|hecho|euros|ahora|tambien|nomina|cuenta|tengo|saldo)/.test(w));
+    const cand=pendientes().filter(x=>x.f<=lim&&(cobro?x.i>0:(x.i<0||x.t==='aplazado')));
+    let mejor=null, best=0;
+    for(const x of cand){
+      const d=PL.deudas.find(q=>q.id===x.d), txt=sinTilde(x.c+' '+(d?d.nombre+' '+d.id:''));
+      let s=pal.filter(w=>txt.includes(w)).length;
+      if(cobro&&/nomina/.test(t)&&/^n-/.test(x.id)) s+=2;
+      if(/extra/.test(t)&&/^x-/.test(x.id)) s+=2;
+      if(/variable/.test(t)&&/^v-/.test(x.id)) s+=2;
+      if(s>best){ best=s; mejor=x; }
+    }
+    if(mejor){
+      if(saldoNuevo!=null){ const r=quitarPrevisto(mejor.id); add(`hecho: ${r.concepto}`,'como me das el saldo nuevo, ya lo incluye: no lo resto otra vez'); }
+      else{ const v=imp!=null?(mejor.i<0?-Math.abs(numES(imp)):Math.abs(numES(imp))):null; const r=marcarHecho(mejor.id,v);
+        add(`hecho: ${r.concepto} (${e2(r.importe)})`,v!=null&&Math.abs(v-r.previsto)>=0.5?`estaba previsto ${e2(r.previsto)}: apunto lo real y la diferencia (${dif(r.previsto,v)}) pasa a tu saldo`:'lo sumo o resto de tu saldo y, si es una deuda, baja lo que debes'); }
+    }else if(!hechos.length&&saldoNuevo==null) throw new Error('No encuentro qué has pagado o cobrado entre lo previsto para los próximos 20 días. Márcalo con «Hecho» en el plan de pagos o dime el nombre (por ejemplo, «he pagado el préstamo del coche»).');
+  }
+  if(saldoNuevo!=null){ const ant=PL.saldo.importe; PL.saldo={fecha:hoy(),importe:saldoNuevo};
+    add(`saldo ${e2(saldoNuevo)} a hoy (antes ${e2(ant)})`,'el plan parte de este saldo; lo previsto antes de hoy sigue pendiente hasta que lo marques como hecho'); }
+  return hechos;
+}
+
+let hist=[];
+try{ hist=JSON.parse(localStorage.getItem(CLAVE_CHAT)||'[]'); }catch(e){ hist=[]; }
+const guardarHist=()=>{ try{ localStorage.setItem(CLAVE_CHAT,JSON.stringify(hist.slice(-40))); }catch(e){} };
+function md(t){
+  const lines=esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').split('\n');
+  let out='', inList=false;
+  for(const l of lines){
+    const li=l.match(/^\s*[-•]\s+(.*)/);
+    if(li){ if(!inList){ out+='<ul>'; inList=true; } out+=`<li>${li[1]}</li>`; continue; }
+    if(inList){ out+='</ul>'; inList=false; }
+    if(l.trim()) out+=`<p>${l}</p>`;
+  }
+  return out+(inList?'</ul>':'');
+}
+function burbuja(rol,txt){
+  const el=document.createElement('div'); el.className='msg '+rol;
+  if(rol==='a') el.innerHTML=md(txt);
+  else if(rol==='imp') el.innerHTML='<b>Cómo te afecta</b>'+txt.map(l=>`<div class="${/^·/.test(l)?'sub':''}${/faltaría/.test(l)?' mal':''}">${esc(l)}</div>`).join('');
+  else el.textContent=txt;
+  $('msgs').appendChild(el); $('msgs').scrollTop=$('msgs').scrollHeight;
+}
+const AYUDA='Te entiendo frases como:\n- Mi saldo es 650 € · Tengo 420 € en la cuenta\n- He pagado el préstamo · Me ha llegado la nómina, 2.540 €\n- En noviembre estaré 20 días fuera · Vuelvo el 15 de junio\n- Me suben un 5 % en enero · Gastos 750\n- Debo 200 € a Jon · Pagaré 200 € a Jon el 5 de diciembre\nPara todo lo demás tienes los formularios de la izquierda.';
+function pintarHist(){
+  $('msgs').innerHTML='';
+  if(!hist.length) burbuja('a','Cuéntame lo que vaya pasando y lo apunto en la nómina, el balance o el plan de pagos. Después te enseño cómo te afecta: qué cobras, cuánto debes y cuál es tu saldo más justo.\n'+AYUDA);
+  for(const h of hist) burbuja(h.rol,h.txt);
+}
+function apuntar(texto){
+  texto=texto.trim(); if(!texto) return;
+  $('input').value='';
+  hist.push({rol:'u',txt:texto}); burbuja('u',texto);
+  const antes=foto0();
+  let hechos=[], err=null;
+  try{ hechos=entender(texto); }catch(e){ err=e.message; }
+  if(err||!hechos.length){
+    PL=antes.PL; EST=antes.EST;
+    const r=err?err:'No lo he entendido. '+AYUDA;
+    hist.push({rol:'a',txt:r}); burbuja('a',r); guardarHist(); return;
+  }
+  const r='**Lo que he entendido y apuntado:**\n'+hechos.map(h=>`- ${h.que}`).join('\n')+'\n**Por qué cambia:**\n'+hechos.map(h=>`- ${h.porque}`).join('\n');
+  hist.push({rol:'a',txt:r}); burbuja('a',r);
+  undoStack.push(antes); guardar();
+  const L=impacto(antes,foto0());
+  if(L.length){ hist.push({rol:'imp',txt:L}); burbuja('imp',L); }
+  guardarHist(); pintar();
+}
+
+/* ============================================================
+   EVENTOS
+   ============================================================ */
+function cambio(fn){ pushUndo(); try{ fn(); }catch(e){ undoStack.pop(); alert(e.message); return; } guardar(); pintar(); }
+function irTab(t){
+  if(!['nomina','balance','pagos'].includes(t)) t='nomina';
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===t)));
+  ['nomina','balance','pagos'].forEach(k=>$('t-'+k).hidden=k!==t);
+  try{ history.replaceState(null,'','#'+t); }catch(e){}
+}
+$('tabs').addEventListener('click',e=>{ const b=e.target.closest('[data-tab]'); if(b) irTab(b.dataset.tab); });
+$('horizonte').addEventListener('change',()=>cambio(()=>{ PL.horizonte=+$('horizonte').value; }));
+$('sGuardar').addEventListener('click',()=>{
+  const f=$('sFecha').value, v=parseFloat($('sImporte').value);
+  if(!esFecha(f)||!isFinite(v)){ alert('Pon la fecha y el saldo.'); return; }
+  cambio(()=>{ PL.saldo={fecha:f,importe:r2(v)}; });
+});
+$('sGastos').addEventListener('change',()=>cambio(()=>editarGastos(Math.abs(parseFloat($('sGastos').value)||0))));
+
+let editando=null;
+function formDeuda(d){
+  editando=d?d.id:null;
+  $('dNombre').value=d?d.nombre:''; $('dBloque').value=d?d.bloque:'fijo'; $('dPendiente').value=d?d.pendiente:'';
+  $('dCuota').value=d&&d.cuota?d.cuota:''; $('dDia').value=d?d.dia:1; $('dNotas').value=d?d.notas:'';
+  $('dTitulo').textContent=d?'Editar deuda':'Añadir deuda'; $('dGuardar').textContent=d?'Guardar cambios':'Añadir deuda'; $('dCancelar').hidden=!d;
+}
+$('dForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const datos={nombre:$('dNombre').value.trim().slice(0,60),bloque:$('dBloque').value,pendiente:r2(Math.max(0,parseFloat($('dPendiente').value)||0)),
+    cuota:r2(Math.max(0,parseFloat($('dCuota').value)||0)),dia:Math.min(28,Math.max(1,parseInt($('dDia').value)||1)),notas:$('dNotas').value.trim().slice(0,240)};
+  if(!datos.nombre) return;
+  cambio(()=>{ const d=PL.deudas.find(x=>x.id===editando); if(d) Object.assign(d,datos); else PL.deudas.push({id:idNuevo('d'),...datos}); });
+  formDeuda(null);
+});
+$('dCancelar').addEventListener('click',()=>formDeuda(null));
+$('bDeudas').addEventListener('click',e=>{
+  const ed=e.target.closest('[data-editar]'), bo=e.target.closest('[data-borrar-deuda]');
+  if(ed){ formDeuda(PL.deudas.find(d=>d.id===ed.dataset.editar)); $('dNombre').focus(); }
+  if(bo){ const d=PL.deudas.find(x=>x.id===bo.dataset.borrarDeuda); if(!d) return;
+    const n=PL.movimientos.filter(m=>m.d===d.id&&m.estado!=='hecho').length;
+    if(!confirm(`¿Borrar la deuda «${d.nombre}»?`+(n?` También se borran sus ${n} pagos previstos.`:''))) return;
+    cambio(()=>{ PL.deudas=PL.deudas.filter(x=>x.id!==d.id); PL.movimientos=PL.movimientos.filter(m=>!(m.d===d.id&&m.estado!=='hecho')); }); }
+});
+function tipoMov(){ const t=$('mTipo').value; document.body.classList.toggle('t-prestamo',t==='prestamo'); document.body.classList.toggle('t-pago',t==='pago'); }
+$('mTipo').addEventListener('change',tipoMov);
+$('mForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const t=$('mTipo').value, v=Math.abs(parseFloat($('mImporte').value)||0), f=$('mFecha').value, c=$('mConcepto').value.trim();
+  if(!esFecha(f)||!c) return;
+  const m={id:idNuevo('m'),f,c:c.slice(0,120),t,d:$('mDeuda').value,i:t==='ingreso'||t==='prestamo'?v:t==='aplazado'?0:-v,estado:'previsto'};
+  if(t==='prestamo') m.debe=r2(Math.abs(parseFloat($('mDebe').value)||v));
+  if(t==='pago'&&$('mCierra').checked) m.cierra=true;
+  cambio(()=>PL.movimientos.push(m));
+  $('mConcepto').value=''; $('mImporte').value=''; $('mDebe').value=''; $('mCierra').checked=false;
+});
+$('bMovs').addEventListener('click',e=>{ const b=e.target.closest('[data-borrar-mov]'); if(b) cambio(()=>{ PL.movimientos=PL.movimientos.filter(m=>m.id!==b.dataset.borrarMov); }); });
+$('pProx').addEventListener('click',e=>{ const b=e.target.closest('[data-hecho]'); if(b) cambio(()=>marcarHecho(b.dataset.hecho)); });
+$('segRango').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; rango=b.dataset.v;
+  $('segRango').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); pintarPagos(); });
+$('btnDeshacer').addEventListener('click',deshacer);
+$('form').addEventListener('submit',e=>{ e.preventDefault(); apuntar($('input').value); });
+$('input').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); apuntar($('input').value); } });
+$('chips').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b){ $('input').value=b.textContent; $('input').focus(); } });
+$('clearChat').addEventListener('click',()=>{ hist=[]; guardarHist(); pintarHist(); });
+
+/* copia de seguridad: el plan y la estancia que usa */
+$('btnExportar').addEventListener('click',()=>{
+  const datos={app:'Mi plan · Calculadora IDOM',version:1,plan:{...PL,estancia:undefined},estancia:EST};
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(datos,null,1)],{type:'application/json'}));
+  a.download='mi-plan-'+hoy()+'.json'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+});
+$('btnImportar').addEventListener('click',()=>$('fichero').click());
+$('fichero').addEventListener('change',async()=>{
+  const f=$('fichero').files[0]; $('fichero').value=''; if(!f) return;
+  let j; try{ j=JSON.parse(await f.text()); }catch(e){ alert('Ese archivo no es un JSON válido.'); return; }
+  const estDe=x=>x&&x.S&&x.campos?x:null;
+  const est=estDe(j)||estDe(j.estancia);
+  const plan=j.plan||(Array.isArray(j.deudas)||Array.isArray(j.movimientos)?j:null);
+  if(!est&&!plan){ alert('No encuentro ni un plan ni una estancia de la calculadora en ese archivo.'); return; }
+  pushUndo();
+  if(plan){ const viejo=PL.estancia; PL=normalizarPlan(plan); if(!PL.estancia&&viejo) PL.estancia=viejo; }
+  if(est){
+    if(!leerCalc()||confirm('¿Usar también la estancia de este archivo en la calculadora? Sustituye la que tienes guardada allí.')){
+      try{ localStorage.setItem(CLAVE_CALC,JSON.stringify(est)); }catch(e){}
+    }
+    PL.estancia=clon(est);
+  }
+  cargarEstancia(); guardar(); pintar();
+});
+/* si la calculadora cambia en otra pestaña, se recalcula */
+window.addEventListener('storage',e=>{ if(e.key===CLAVE_CALC){ cargarEstancia(); pintar(); } });
+
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+
+$('mFecha').value=hoy();
+tipoMov();
+pintarHist();
+pintar();
+irTab((location.hash||'').slice(1));
+
+</script>
+</body>
+</html>

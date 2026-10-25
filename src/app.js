@@ -7,56 +7,13 @@ const S={mode:'desglose',ultimo:'desglose',periodo:'estancia',cmp:{A:null,B:null
          subidas:[{pct:3,desde:'2027-01'}],overrides:{}};
 const num=id=>{const v=parseFloat($(id).value);return isFinite(v)?v:0;};
 
-function leer(){
-  const imp=Math.max(0,num('importe'));
-  const pagas=S.pagas;
-  const salario0=S.modoImporte==='anual'?imp:imp*pagas;
-  let a=+$('extra1').value,b=+$('extra2').value;
-  if(a===b){a=6;b=12;}
-  const extraMeses=pagas===14?[Math.min(a,b),Math.max(a,b)]:[];
-  const prorr=pagas===14&&S.cobroExtra==='prorr';
-  const po=PAISES.find(p=>p[0]===$('origen').value)||PAISES[0];
-  const pd=PAISES.find(p=>p[0]===$('destino').value)||PAISES[0];
-  const nuclear=$('nuclear').checked;
-  const plusDe=d=>(d[2]<=po[2]?0.15:0.15+(d[2]-po[2]))+(nuclear?0.10:0);
-  const pctPlus=plusDe(pd);
-  const tramo=(d,a,b)=>{ const sa=parseFecha(a), rb=parseFecha(b);
-    return {destino:d[0],dietaDia:d[1],pctPlus:plusDe(d),salida:sa,regreso:rb,
-            a:sa?diaNum(sa.y,sa.m,sa.d):NaN,b:rb?diaNum(rb.y,rb.m,rb.d):NaN}; };
-  /* una estancia; con vuelta intermedia a España, dos tramos al mismo destino */
-  let estancias=[tramo(pd,$('salida').value,$('regreso').value)];
-  const pausa=$('est2').checked;
-  if(pausa){
-    const v=parseFecha($('vueltaEsp').value), n=parseFecha($('idaDeNuevo').value);
-    const iso=x=>x?new Date((diaNum(x.y,x.m,x.d))*864e5).toISOString().slice(0,10):'';
-    const dia=(x,k)=>x?new Date((diaNum(x.y,x.m,x.d)+k)*864e5).toISOString().slice(0,10):'';
-    /* el día que vuelves ya estás en España; el día que te vas de nuevo ya estás fuera */
-    estancias=[tramo(pd,$('salida').value,dia(v,-1)),tramo(pd,iso(n),$('regreso').value)];
-    estancias.pausa={vuelta:v,ida:n};
-  }
-  const ult=estancias[estancias.length-1];
-  const subidas=S.subidas
-    .map(s=>({pct:+s.pct||0,i:parseYM(s.desde)}))
-    .filter(s=>isFinite(s.i)&&S.mode!=='desglose')
-    .sort((x,y)=>x.i-y.i);
-  const bMax=num('baseMax')||1e9;
-  return {
-    salario0,pagas,extraMeses,prorr,variable:Math.max(0,num('variable')),
-    regimen:$('regimen').value,aplicaNomina:$('aplicaNomina').checked,costeDestino:$('costeDestino').checked,
-    tope:$('tope').checked,
-    ipc:num('ipc')/100,indexar:$('indexar').checked,meiProg:$('meiProg').checked,eurosHoy:$('eurosHoy').checked,
-    modoDias:$('modoDias').value,
-    desc:+$('desc').value,disc:+$('disc').value,
-    irpf:S.irpf,irpfManual:num('irpfManual')/100,
-    tSS:num('tipoSS')/100,tEmp:num('tipoEmp')/100,bMin:num('baseMin'),bMax,
-    subidas,
-    origen:po[0],destino:pd[0],nuclear,dietaDia:pd[1],pctPlus,
-    estancias,pausa:pausa?estancias.pausa:null,
-    salida:estancias[0].salida,regreso:ult.regreso||estancias[0].regreso,
-    diasDef:Math.max(0,Math.min(31,num('diasDef'))),
-    anio:Math.round(num('anio'))||new Date().getFullYear(),
-  };
+/* Lo que hay en pantalla, en el mismo formato que se guarda */
+function camposForm(){
+  const c={}; CAMPOS.forEach(id=>c[id]=$(id).value);
+  CHECKS.forEach(id=>c[id]=$(id).checked);
+  return c;
 }
+function leer(){ return paramsDe(camposForm(),S); }
 
 /* ============================================================
    INTERFAZ: CONTROLES
@@ -1098,8 +1055,7 @@ const CAMPOS=['importe','variable','extra1','extra2','origen','destino','salida'
   'regimen','modoDias','ipc',
   'irpfManual','desc','disc','tipoSS','tipoEmp','baseMin','baseMax'];
 function estado(){
-  const c={}; CAMPOS.forEach(id=>c[id]=$(id).value);
-  CHECKS.forEach(id=>c[id]=$(id).checked);
+  const c=camposForm();
   const st=JSON.parse(JSON.stringify(S));
   delete st.cmp; delete st.ultimo;
   if(st.mode==='comparador') st.mode=S.ultimo||'desglose';
