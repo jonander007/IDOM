@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0061A8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Calculadora IDOM">
+<title>Calculadora de nóminas y desplazamientos · IDOM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icono.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icono-180.png">
+<script src="vendor/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body class="m-desglose irpf-tabla">
+<div class="wrap">
+<div id="impresion"></div>
+
+<header>
+  <div>
+    <h1>Calculadora de nóminas y desplazamientos de IDOM <span class="tag" style="font-size:15px;font-weight:400">· Bizkaia 2026</span></h1>
+    <p>Nómina, subidas de sueldo y estancias en el extranjero en un solo sitio, con un comparador para poner dos escenarios lado a lado.</p>
+  </div>
+  <div class="acciones">
+    <a class="btn plan-link" href="plan.html">Mi plan →</a>
+    <button class="btn" type="button" id="btnGuardar">Guardar JSON</button>
+    <button class="btn" type="button" id="btnCargar">Cargar JSON</button>
+    <input type="file" id="fichero" accept=".json,application/json" hidden>
+    <button class="btn" type="button" id="btnExcel">Exportar Excel</button>
+    <button class="btn" type="button" id="btnPdf">Informe PDF</button>
+    <button class="btn reset" type="button" id="btnReset" title="Volver a los valores iniciales">↺ Resetear</button>
+  </div>
+</header>
+
+<nav class="modos" id="segModo" aria-label="Qué quieres calcular">
+  <button type="button" data-v="desglose" aria-pressed="true"><b>Desglosar nómina</b><span>Tu nómina de un mes y de un año, línea a línea</span></button>
+  <button type="button" data-v="subidas" aria-pressed="false"><b>Subidas de sueldo</b><span>Aplica subidas en cadena y mira cómo quedan mensualidades y extras</span></button>
+  <button type="button" data-v="estancia" aria-pressed="false"><b>Calcular estancia</b><span>Desplazamiento desde el día que te vas, con plus y dietas</span></button>
+  <button type="button" data-v="comparador" aria-pressed="false"><b>Comparador</b><span>Carga dos JSON guardados y compáralos lado a lado</span></button>
+</nav>
+
+<div class="grid">
+
+  <!-- ================= PANEL ================= -->
+  <form class="panel" id="form" onsubmit="return false">
+    <h3>Sueldo</h3>
+    <div class="field">
+      <label class="lab" for="importe">Salario base bruto</label>
+      <input class="big-input" type="number" id="importe" value="35000" min="0" step="100">
+      <div class="seg" style="margin-top:8px" id="segImporte">
+        <button type="button" data-v="anual" aria-pressed="true">Al año</button>
+        <button type="button" data-v="paga" aria-pressed="false">Por paga</button>
+      </div>
+      <div class="hint" id="hintImporte"></div>
+    </div>
+    <div class="field">
+      <label class="lab" for="variable">Variable bruto anual</label>
+      <input type="number" id="variable" value="0" min="0" step="100">
+      <div class="hint">Se cobra entero en febrero, sin prorratear ni entrar en las extras. Cuenta para el tipo de IRPF.</div>
+    </div>
+
+    <div class="field">
+      <label class="lab">Número de pagas</label>
+      <div class="seg" id="segPagas">
+        <button type="button" data-v="12" aria-pressed="false">12 pagas</button>
+        <button type="button" data-v="14" aria-pressed="true">14 pagas</button>
+      </div>
+    </div>
+    <div class="field solo-14">
+      <label class="lab">Pagas extras</label>
+      <div class="seg no-estancia" id="segCobro">
+        <button type="button" data-v="aparte" aria-pressed="true">Se cobran aparte</button>
+        <button type="button" data-v="prorr" aria-pressed="false">Prorrateadas</button>
+      </div>
+      <div class="hint solo-estancia" style="margin-top:0">En la estancia cada extra sale como partida aparte en su mes.</div>
+      <div class="row2" style="margin-top:8px">
+        <div><select id="extra1" aria-label="Mes de la primera extra"></select><div class="hint">1.ª extra</div></div>
+        <div><select id="extra2" aria-label="Mes de la segunda extra"></select><div class="hint">2.ª extra</div></div>
+      </div>
+      <div class="hint">Cada extra se devenga en los meses desde la anterior: si hay una subida a mitad del periodo, la extra mezcla el sueldo viejo y el nuevo.</div>
+    </div>
+
+    <div class="no-desglose">
+    <h3>Subidas de sueldo, en cadena</h3>
+    <div id="subidas"></div>
+    <div class="quick" id="quickSub">
+      <button type="button" data-p="1">+1 %</button>
+      <button type="button" data-p="2">+2 %</button>
+      <button type="button" data-p="3">+3 %</button>
+      <button type="button" data-p="5">+5 %</button>
+      <button type="button" data-p="10">+10 %</button>
+    </div>
+    <div class="hint" id="hintSubidas"></div>
+    </div>
+
+    <div class="solo-estancia">
+      <h3>Desplazamiento</h3>
+      <div class="field">
+        <label class="lab" for="origen">País de origen</label>
+        <select id="origen"></select>
+      </div>
+      <div class="field">
+        <label class="lab" for="destino">País o ciudad de destino</label>
+        <select id="destino"></select>
+      </div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="nuclear"> Central nuclear (+10 % de plus)</label>
+      </div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="est2"> Vuelta a España a mitad de la estancia</label>
+      </div>
+      <div class="field">
+        <div class="row2 fechas-est">
+          <div><label class="lab" for="salida">Día de salida</label><input type="date" id="salida" value="2026-10-15"></div>
+          <div class="solo-est2"><label class="lab" for="vueltaEsp">Vuelves a España</label><input type="date" id="vueltaEsp" value="2027-04-01"></div>
+          <div class="solo-est2"><label class="lab" for="idaDeNuevo">Regresas a la estancia</label><input type="date" id="idaDeNuevo" value="2027-05-15"></div>
+          <div><label class="lab" for="regreso"><span class="no-est2">Día de regreso</span><span class="solo-est2">Vuelta definitiva</span></label><input type="date" id="regreso" value="2027-12-20"></div>
+        </div>
+        <div class="hint no-est2">El resto del año cobras el sueldo de origen.</div>
+        <div class="hint solo-est2">Mismo destino, con un tramo en España en medio (por ejemplo Italia, España, Italia). En ese tramo cobras el sueldo español, sin plus ni dietas. La regla de los 183 días suma los dos tramos fuera.</div>
+      </div>
+      <div class="field">
+        <label class="lab">Periodo a calcular</label>
+        <div class="seg" id="segPeriodo">
+          <button type="button" data-v="estancia" aria-pressed="true">Solo la estancia</button>
+          <button type="button" data-v="custom" aria-pressed="false">Otro periodo</button>
+        </div>
+        <div class="row2 solo-custom" style="margin-top:8px">
+          <div><input type="month" id="calcDesde" value="2026-01" aria-label="Calcular desde" placeholder="AAAA-MM"><div class="hint">Desde</div></div>
+          <div><input type="month" id="calcHasta" value="2027-12" aria-label="Calcular hasta" placeholder="AAAA-MM"><div class="hint">Hasta</div></div>
+        </div>
+        <div class="hint solo-custom">Meses completos. Los que caen fuera de la estancia van con el sueldo español; por ejemplo, de enero a octubre aunque vuelvas en julio.</div>
+      </div>
+      <div class="field">
+        <label class="lab" for="modoDias">Días en destino (para plus y dietas)</label>
+        <select id="modoDias">
+          <option value="fijo">Un número fijo al mes</option>
+          <option value="laborables">Laborables según calendario (lunes a viernes)</option>
+          <option value="naturales">Todos los días naturales</option>
+        </select>
+        <div class="row2 solo-dias-fijo" style="margin-top:8px">
+          <div><input type="number" id="diasDef" value="22" min="0" max="31" aria-label="Días en destino en un mes completo"><div class="hint">días en un mes completo</div></div>
+        </div>
+        <div class="hint">Se puede cambiar mes a mes en la tabla del calendario. Las dietas no cuentan para el tipo de IRPF.</div>
+      </div>
+
+      <h3>Impuestos de la estancia</h3>
+      <div class="field">
+        <label class="lab" for="regimen">Cómo tributa lo cobrado fuera</label>
+        <select id="regimen">
+          <option value="917">Exención por trabajos en el extranjero (art. 9.17)</option>
+          <option value="183">Regla simplificada de los 183 días</option>
+          <option value="ninguno">Tributa todo en España</option>
+        </select>
+        <div class="hint" id="hintRegimen"></div>
+      </div>
+      <div class="field solo-917">
+        <label class="check"><input type="checkbox" id="aplicaNomina" checked> IDOM aplica la exención ya en la nómina</label>
+        <div class="hint">Si no, te retienen como siempre y lo recuperas en la declaración de la renta.</div>
+      </div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="costeDestino"> El coste lo soporta una entidad del país de destino (filial, sucursal o cliente allí)</label>
+        <div class="hint">Con el convenio, el país de destino puede gravarte si pasas más de 183 días allí en el año natural, o desde el primer día si se cumple esta casilla.</div>
+      </div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="tope" checked> IDOM compensa para que no pagues más IRPF que quedándote en España</label>
+      </div>
+    </div>
+
+    <div class="solo-subidas">
+      <h3>Calendario</h3>
+      <div class="field">
+        <label class="lab" for="anio">Ver mes a mes desde el año</label>
+        <input type="number" id="anio" value="2026" min="2000" max="2100">
+      </div>
+    </div>
+
+    <div class="no-comparador">
+      <h3>Años futuros e inflación</h3>
+      <div class="field">
+        <div class="row2">
+          <div><label class="lab" for="ipc">IPC anual (%)</label><input type="number" id="ipc" value="2" step="0.1" min="-5" max="20"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="indexar" checked> Actualizar con el IPC los tramos del IRPF y las bases de cotización después de 2026</label>
+      </div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="meiProg" checked> Aplicar la subida prevista del MEI (0,15 % en 2026 → 0,20 % en 2029)</label>
+      </div>
+      <div class="field">
+        <label class="check"><input type="checkbox" id="eurosHoy"> Ver también en euros de hoy (descontando el IPC)</label>
+      </div>
+    </div>
+
+    <h3>IRPF</h3>
+    <div class="field">
+      <div class="seg" id="segIrpf">
+        <button type="button" data-v="tabla" aria-pressed="true">Tabla foral</button>
+        <button type="button" data-v="prog" aria-pressed="false">Tramos</button>
+        <button type="button" data-v="manual" aria-pressed="false">Manual</button>
+        <button type="button" data-v="zero" aria-pressed="false">0 %</button>
+      </div>
+      <div class="hint" id="hintIrpf"></div>
+    </div>
+    <div class="field solo-manual">
+      <label class="lab" for="irpfManual">Tipo manual (%)</label>
+      <input type="number" id="irpfManual" value="17" min="0" max="60" step="0.1">
+    </div>
+    <div class="field">
+      <div class="row2">
+        <div>
+          <label class="lab" for="desc">Descendientes</label>
+          <select id="desc">
+            <option value="0" selected>Ninguno</option>
+            <option value="1">1</option><option value="2">2</option>
+            <option value="3">3</option><option value="4">4</option>
+            <option value="5">5</option><option value="6">6 o más</option>
+          </select>
+        </div>
+        <div>
+          <label class="lab" for="disc">Discapacidad</label>
+          <select id="disc">
+            <option value="0" selected>No procede</option>
+            <option value="1">Apdo. 4.a)</option>
+            <option value="2">Apdos. 4.b) y c)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <details>
+      <summary>Ajustes de cotización</summary>
+      <div class="adv">
+        <div class="field">
+          <label class="lab" for="tipoSS">Cuota obrera (%)</label>
+          <input type="number" id="tipoSS" value="6.50" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label class="lab" for="tipoEmp">Cuota empresa (%)</label>
+          <input type="number" id="tipoEmp" value="32.30" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label class="lab" for="baseMin">Base mínima (€/mes)</label>
+          <input type="number" id="baseMin" value="1649.70" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label class="lab" for="baseMax">Base máxima (€/mes)</label>
+          <input type="number" id="baseMax" value="5101.20" step="0.01" min="0">
+        </div>
+      </div>
+    </details>
+  </form>
+
+  <!-- ================= RESULTADOS ================= -->
+  <div id="resultados">
+
+    <!-- ========== DESGLOSE Y SUBIDAS ========== -->
+    <div class="no-estancia">
+      <div class="hero solo-desglose">
+        <div class="row">
+          <div>
+            <div class="figure" id="nHeroNeto">—</div>
+            <div class="fig-lab" id="nHeroLab">líquido de una mensualidad</div>
+          </div>
+          <div class="solo-extra-aparte" id="nHeroExtraBox">
+            <div class="sub" id="nHeroExtra">—</div>
+            <div class="sub-lab">líquido de cada paga extra</div>
+          </div>
+          <div id="nHeroVarBox">
+            <div class="sub" id="nHeroVar">—</div>
+            <div class="sub-lab">líquido del variable, en febrero</div>
+          </div>
+          <div>
+            <div class="sub" id="nHeroAnual">—</div>
+            <div class="sub-lab">líquido al año</div>
+          </div>
+          <div>
+            <div class="sub" id="nHeroTipo">—</div>
+            <div class="sub-lab" id="nHeroTipoLab">retención IRPF</div>
+          </div>
+        </div>
+        <div class="note" id="nTramoNota"></div>
+      </div>
+
+      <div class="panel solo-desglose" style="margin-top:18px">
+        <h2>Tu nómina, línea a línea</h2>
+        <div class="ancho"><table id="nNomina"></table></div>
+        <div class="note" id="nNominaNota"></div>
+      </div>
+
+      <div class="panel solo-desglose" style="margin-top:18px">
+        <h2>Mensualidades, pagas extras y año</h2>
+        <div class="ancho"><table id="nTablaReparto"></table></div>
+        <div class="note" id="nCosteNota"></div>
+      </div>
+
+      <div class="panel solo-desglose" style="margin-top:18px">
+        <h2>Declaración de la renta estimada <span class="tag" id="nRentaTag"></span></h2>
+        <div class="ancho"><table id="nRenta"></table></div>
+        <div class="note" id="nRentaNota"></div>
+      </div>
+
+      <div class="hero solo-subidas">
+        <div class="row">
+          <div>
+            <div class="figure" id="sHeroNeto">—</div>
+            <div class="fig-lab" id="sHeroLab">líquido de una mensualidad tras las subidas</div>
+          </div>
+          <div id="sHeroExtraBox">
+            <div class="sub" id="sHeroExtra">—</div>
+            <div class="sub-lab" id="sHeroExtraLab">líquido de cada paga extra</div>
+          </div>
+          <div>
+            <div class="sub" id="sHeroBruto">—</div>
+            <div class="sub-lab" id="sHeroBrutoLab">bruto anual al final</div>
+          </div>
+          <div>
+            <div class="sub" id="sHeroGana">—</div>
+            <div class="sub-lab">más de líquido al año que hoy</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel solo-subidas" style="margin-top:18px">
+        <h2>Subidas encadenadas <span class="tag">· cada una sobre el sueldo que deja la anterior</span></h2>
+        <div class="scrollx"><table id="nRecorrido"></table></div>
+        <div class="note" id="nRecorridoNota"></div>
+        <div class="chartbox">
+          <div class="legend">
+            <span><span class="key" style="background:var(--red)"></span>Líquido anual con la tabla foral</span>
+            <span><span class="key" style="background:var(--teal)"></span>Líquido anual si fuese por tramos</span>
+            <span><span class="key" style="background:var(--ink)"></span>Hoy y cada subida</span>
+          </div>
+          <svg id="chartNeto" viewBox="0 0 760 300" role="img" aria-label="Líquido anual en función del salario bruto"></svg>
+        </div>
+      </div>
+
+      <div class="panel solo-subidas" style="margin-top:18px">
+        <h2>Mes a mes <span class="tag" id="nCalTag"></span></h2>
+        <div id="nCalendario"></div>
+      </div>
+
+      <div class="panel solo-desglose" style="margin-top:18px">
+        <h2>Tabla foral frente a tramos, para tu sueldo actual</h2>
+        <table>
+          <tr class="th"><td></td><td class="n">Tabla foral</td><td class="n">Por tramos</td><td class="n">Diferencia</td></tr>
+          <tr><td>Retención del año</td><td class="n" id="cU">—</td><td class="n" id="cP">—</td><td class="n" id="cD">—</td></tr>
+          <tr><td>Tipo medio</td><td class="n" id="cUt">—</td><td class="n" id="cPt">—</td><td class="n"></td></tr>
+          <tr class="total"><td>Líquido anual</td><td class="n" id="cUn">—</td><td class="n" id="cPn">—</td><td class="n" id="cDn">—</td></tr>
+        </table>
+        <div class="chartbox">
+          <div class="legend">
+            <span><span class="key" style="background:var(--red)"></span>Tipo único de la tabla</span>
+            <span><span class="key" style="background:var(--teal)"></span>Tipo medio si fuese por tramos</span>
+            <span><span class="key" style="background:var(--ink)"></span>Tu sueldo</span>
+          </div>
+          <svg id="chartTipo" viewBox="0 0 760 300" role="img" aria-label="Tipo de retención según el salario bruto anual"></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== COMPARADOR ========== -->
+    <div class="solo-comparador">
+      <div class="slots" id="cmpSlots"></div>
+      <input type="file" id="cmpFichero" accept=".json,application/json" hidden>
+      <div class="panel" style="margin-top:18px">
+        <h2>Comparación</h2>
+        <div class="kpis" id="cmpKpis" style="margin-bottom:16px"></div>
+        <div class="ancho"><table id="cmpTabla"></table></div>
+        <div class="note" id="cmpNota"></div>
+      </div>
+      <div class="panel" id="cmpMesesPanel" style="margin-top:18px">
+        <h2>Mes a mes <span class="tag" id="cmpMesesTag"></span></h2>
+        <div class="legend" id="cmpLeyenda"></div>
+        <svg id="chartCmp" viewBox="0 0 1200 280" role="img" aria-label="Líquido de cada mes en cada escenario"></svg>
+        <div class="scrollx" style="margin-top:14px"><table class="cal" id="cmpMeses"></table></div>
+      </div>
+    </div>
+
+    <!-- ========== ESTANCIA ========== -->
+    <div class="solo-estancia">
+      <div id="eAviso"></div>
+      <div id="eContenido">
+        <div class="panel dash">
+          <div class="dash-head">
+            <h2 style="border:0;margin:0;padding:0">Tu estancia <span class="tag" id="eDashTag"></span></h2>
+            <div class="cfg" id="eCfg" style="margin:0;padding:0;border:0"></div>
+          </div>
+          <div class="kpis" id="eKpis"></div>
+        </div>
+
+        <div class="dos">
+        <div class="panel" style="margin-top:18px">
+          <h2>Desglose de la estancia <span class="tag" id="eResTag"></span></h2>
+          <div class="ancho"><table id="eResumen"></table></div>
+          <div class="note" id="eResNota"></div>
+        </div>
+
+        <div class="panel" style="margin-top:18px">
+          <h2>Líquido de cada mes de estancia</h2>
+          <div class="legend">
+            <span><span class="key bar" style="background:var(--teal)"></span>Desplazado</span>
+            <span><span class="key" style="background:var(--ink)"></span>Si te hubieras quedado, los mismos días</span>
+          </div>
+          <svg id="chartEstancia" viewBox="0 0 760 300" role="img" aria-label="Líquido de cada mes de estancia frente a quedarse"></svg>
+        </div>
+        </div>
+
+        <div class="panel" style="margin-top:18px">
+          <h2>IRPF y residencia fiscal, año a año</h2>
+          <div class="ancho"><table id="eAnios"></table></div>
+          <div class="note" id="eAniosNota"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="solo-estancia" id="eCalPanel">
+  <div class="panel" style="margin-top:18px">
+    <h2>Mes a mes, solo el periodo de estancia</h2>
+    <div class="hint" style="margin:-4px 0 6px">Salario y pagas extras en proporción a los días naturales fuera de cada mes. Los días en destino (los que cuentan para plus y dietas) se pueden editar; los meses cambiados quedan marcados. <button type="button" class="btn" id="btnResetDias" style="padding:3px 8px;font-size:12px;margin-left:6px">Volver a los días por defecto</button></div>
+    <div id="eCalendario"></div>
+  </div>
+</div>
+
+    <footer>
+      <p><b>IRPF.</b> Tabla general de retenciones sobre trabajo personal de la Diputación Foral de Bizkaia vigente desde el 01/01/2026, con descendientes y reducciones por discapacidad. En el calendario la retención se regulariza cada mes: el tipo se recalcula con lo cobrado en el año y lo que queda por cobrar en las condiciones de ese mes, igual que hace la nómina cuando cambia el sueldo o te desplazas. El modo por tramos no existe en la normativa foral, solo sirve de contraste.</p>
+      <p><b>Seguridad Social.</b> Cuota obrera del 6,50 % (contingencias comunes 4,70 + MEI 0,15 + desempleo, FOGASA y formación 1,65). La base mensual incluye la prorrata de las extras y el plus, con los topes mínimo y máximo, así que las extras no cotizan en el mes en que se cobran.</p>
+      <p><b>Desplazamiento.</b> Plus = salario anual ÷ 365 × % × días en destino, con un 15 % de base, más la diferencia de porcentaje si el destino tiene más que el origen, y +10 % en central nuclear. Las dietas de manutención son netas y exentas de IRPF y SS dentro de los límites del art. 13 NF 13/2013; el alojamiento lo paga IDOM directamente y no aparece. Las pagas extras solo llevan salario base, sin plus ni dietas.</p>
+      <p><b>Impuestos de la estancia.</b> Por defecto se aplica la exención por trabajos efectivamente realizados en el extranjero (art. 9.17 NF 13/2013): lo cobrado por los días trabajados fuera, incluido el plus, no tributa en España hasta 60.100 € al año, siempre que el trabajo sea para una entidad o establecimiento en el extranjero y el país tenga un impuesto similar. Según el convenio con Italia, el país de destino puede gravar si pasas más de 183 días allí en el año natural, o desde el primer día si el coste lo soporta una entidad de allí; IDOM compensa para que no pagues más IRPF que quedándote en España. Las dietas nunca cuentan para el tipo de retención.</p>
+      <p><b>Renta y años futuros.</b> La renta estimada usa la escala de Bizkaia 2026, la bonificación del trabajo y la minoración de 1.615 €, sin deducciones personales. Para años posteriores a 2026 se pueden actualizar con el IPC los tramos, las bases de cotización (la máxima, IPC + 1,2 puntos) y aplicar la subida prevista del MEI hasta 2029.</p>
+      <p><b>Variable.</b> Se cobra íntegro en febrero, sin prorratear ni entrar en las extras ni en el plus. Suma para calcular el tipo de IRPF de todo el año y cotiza en febrero hasta la base máxima.</p>
+      <p>Cálculo orientativo. La retención es un pago a cuenta: la cuota definitiva sale en la declaración y puede haber exenciones por trabajos en el extranjero que aquí no se aplican.</p>
+    </footer>
+</div>
+
+<div id="barraMovil" role="region" aria-label="Resultado">
+  <div class="bm-txt"><div class="bm-v" id="bmV">—</div><div class="bm-l" id="bmL"></div></div>
+  <button type="button" id="bmDatos">Datos</button>
+  <button type="button" id="bmRes" class="on">Resultado</button>
+</div>
+<script src="datos.js"></script>
+<script src="motor.js"></script>
+<script src="params.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

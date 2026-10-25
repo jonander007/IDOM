@@ -1,0 +1,16 @@
+{
+  "name": "Calculadora de nóminas y desplazamientos",
+  "short_name": "Calculadora IDOM",
+  "description": "Nómina, subidas de sueldo, estancias en el extranjero y comparador de escenarios (Bizkaia).",
+  "lang": "es",
+  "start_url": "./calculadora-idom.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#E8EEF5",
+  "theme_color": "#0061A8",
+  "icons": [
+    {"src": "icono.svg", "sizes": "any", "type": "image/svg+xml"},
+    {"src": "icono-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
